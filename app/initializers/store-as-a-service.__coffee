@@ -1,0 +1,13 @@
+
+storeServiceInitializer =  {
+  name: 'store-as-a-service'
+  after: 'simple-store'
+
+  initialize: (application) ->
+    #store = application.lookup('store:main')
+    store = Ember.getOwner(application).lookup('store:main')
+
+    application.register('service:store', store, { instantiate: false})
+}
+
+`export default storeServiceInitializer`
