@@ -1,5 +1,5 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
 
 C = CMCore.C
 
@@ -28,4 +28,4 @@ PtxsSupport = Ember.Mixin.create(
 )
 
 
-`export default PtxsSupport`
+export default PtxsSupport

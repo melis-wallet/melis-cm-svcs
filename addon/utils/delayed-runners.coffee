@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 
 waitTime = (time) ->
@@ -19,4 +19,4 @@ waitIdleTime = (time) ->
   )
 
 
-`export { waitTime, waitIdle, waitIdleTime }`
+export { waitTime, waitIdle, waitIdleTime }

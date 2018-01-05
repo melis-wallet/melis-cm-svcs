@@ -1,4 +1,4 @@
-`import { attr, Model } from 'ember-cli-simple-store/model'`
+import { attr, Model } from 'ember-cli-simple-store/model'
 
 Address = Model.extend(
   cm:  Ember.inject.service('cm-session')
@@ -32,4 +32,4 @@ Address = Model.extend(
   ).on('init')
 )
 
-`export default Address`
+export default Address

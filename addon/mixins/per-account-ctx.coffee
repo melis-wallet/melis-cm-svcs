@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 PerAccountCtx = Ember.Mixin.create(
 
@@ -31,10 +31,10 @@ PerAccountCtx = Ember.Mixin.create(
 
   _getContextForAccount: (account) ->
     ctxs = @get('_ctxs')
-    if account && Ember.isPresent(num = Ember.get(account, 'num')) && (ctx = ctxs.findBy('num', num))
+    if account && Ember.isPresent(pubId = Ember.get(account, 'pubId')) && (ctx = ctxs.findBy('pubId', pubId))
       return ctx
     else
-      return ctxs.pushObject(@ctxContainer.create(num: num, account: account))
+      return ctxs.pushObject(@ctxContainer.create(pubId: pubId, account: account))
 
   init: ->
     @_super(arguments...)
@@ -51,4 +51,4 @@ PerAccountCtx = Ember.Mixin.create(
 
 )
 
-`export default PerAccountCtx`
+export default PerAccountCtx

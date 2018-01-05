@@ -1,5 +1,5 @@
-`import Ember from 'ember'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
+import Ember from 'ember'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
 DELAY = 5000
 INITED_SVCS = 4
@@ -34,7 +34,7 @@ Stream= Ember.Service.extend(Ember.Evented,
   findByAccount: (account) ->
     if account
       store = @get('store')
-      store.find('stream-entry', {'account.num': Ember.get(account, 'num')})
+      store.find('stream-entry', {'account.pubId': Ember.get(account, 'pubId')})
 
   #
   # a new account has been created
@@ -61,8 +61,8 @@ Stream= Ember.Service.extend(Ember.Evented,
   setHighWater: (target, time, account=null) ->
     target.set('stream.highWater', time)
     id =
-      if account && (num = Ember.get(account, 'num'))
-        'hwm-' + account.get('num')
+      if account && (pubId = Ember.get(account, 'pubId'))
+        'hwm-' + account.get('pubId')
       else
         'hwm-w'
     @push(id: id, account: account, subclass: 'hwm', content: {display: true},  created: time, updated: time)
@@ -71,8 +71,8 @@ Stream= Ember.Service.extend(Ember.Evented,
   setLowWater: (target, time, account=null) ->
     target.set('stream.lowWater', time)
     id =
-      if account && (num = Ember.get(account, 'num'))
-        'lwm-' + account.get('num')
+      if account && (pubId = Ember.get(account, 'pubId'))
+        'lwm-' + account.get('pubId')
       else
         'lwm-w'
     @push(id: id, account: account, subclass: 'lwm', content: {display: true},  created: time, updated: time)
@@ -96,4 +96,4 @@ Stream= Ember.Service.extend(Ember.Evented,
 
 )
 
-`export default Stream`
+export default Stream

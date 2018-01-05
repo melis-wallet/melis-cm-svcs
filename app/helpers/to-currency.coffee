@@ -1,9 +1,11 @@
-`import Ember from 'ember'`
-`import formatMoney from "accounting/format-money"`
+import Ember from 'ember'
+import formatMoney from "accounting/format-money"
 
 toCurrency = Ember.Helper.extend(
 
   cm:  Ember.inject.service('cm-session')
+  account: null
+
   currencySvc: Ember.inject.service('cm-currency')
 
   compute: (params, options) ->
@@ -11,8 +13,10 @@ toCurrency = Ember.Helper.extend(
     opts = Ember.copy(options)
     amount = Math.abs(amount) if opts.abs
 
+    account = @set('account', options.account)
+
     unless Ember.isBlank(amount)
-      value = @get('currencySvc').convertTo(amount)
+      value = @get('account.unit')?.convertToCurrency(amount)
       if opts.compact && (value >= 1000)
          opts.precision = 0
       res = formatMoney(value, opts)
@@ -26,11 +30,11 @@ toCurrency = Ember.Helper.extend(
     else
       res
 
-  onCurrencyChange: (->
-    @recompute()
-  ).observes('currencySvc.value', 'currencySvc.currency')
+
+  hasChanged: (-> @recompute()).observes('account.unit.value', 'currencySvc.currency' )
+
 )
 
-`export default toCurrency`
+export default toCurrency
 
 

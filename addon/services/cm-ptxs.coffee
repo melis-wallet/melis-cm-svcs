@@ -1,8 +1,8 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import Ptx from 'melis-cm-svcs/models/ptx'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
-`import { mergeProperty } from 'melis-cm-svcs/utils/misc'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import Ptx from 'melis-cm-svcs/models/ptx'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+import { mergeProperty } from 'melis-cm-svcs/utils/misc'
 
 C = CMCore.C
 SVCID = 'ptxs'
@@ -91,7 +91,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   findByAccount: (account) ->
     if account
       store = @get('store')
-      store.find('ptx', {'account.num': Ember.get(account, 'num')})
+      store.find('ptx', {'account.pubId': Ember.get(account, 'pubId')})
 
   #
   # a new account has been created
@@ -188,8 +188,8 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   #
   #
   getUnspents: (account) ->
-    if num = Ember.get(account, 'num')
-      @get('cm.api').getUnspents(num).then((res) =>
+    if cmo = Ember.get(account, 'cmo')
+      @get('cm.api').getUnspents(cmo).then((res) =>
         account.set('unspents', res.list)
       )
 
@@ -377,4 +377,4 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   ).on('willDestroy')
 )
 
-`export default CmPreparedTxService`
+export default CmPreparedTxService

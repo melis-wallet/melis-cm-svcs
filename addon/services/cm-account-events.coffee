@@ -1,6 +1,6 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
 DELAY = 2000
 SVCID = 'account-events'
@@ -127,4 +127,4 @@ CmAccountEventsService = Ember.Service.extend(Ember.Evented,
 
 )
 
-`export default CmAccountEventsService`
+export default CmAccountEventsService

@@ -1,5 +1,5 @@
-`import Configuration from 'melis-cm-svcs/utils/configuration'`
-`import ENV from '../config/environment'`
+import Configuration from 'melis-cm-svcs/utils/configuration'
+import ENV from '../config/environment'
 
 MelisSessionInitializer = {
   name:       'melis-session'
@@ -9,4 +9,4 @@ MelisSessionInitializer = {
     Configuration.load(application.container, config);
 }
 
-`export default MelisSessionInitializer`
+export default MelisSessionInitializer

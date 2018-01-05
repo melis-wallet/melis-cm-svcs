@@ -1,6 +1,6 @@
-`import Ember from 'ember'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
-`import ScheduledEvent from '../mixins/scheduled-event'`
+import Ember from 'ember'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+import ScheduledEvent from '../mixins/scheduled-event'
 
 DELAY = 2000
 STORAGE_ACCOUNT_PTR = /^storage\:recovery-info\:cm-account\:(.+)$/
@@ -36,12 +36,13 @@ CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
     )
 
   reviewExpiring: (list) ->
+    console.error "REVIEW", list
     try
       cm = @get('cm')
-      list.forEach((e) -> Ember.set(e, 'timeExpire', cm.estimateBlockTime(e.blockExpire)) if e.blockExpire)
+      list.forEach((e) -> Ember.set(e, 'timeExpire', cm.estimateBlockTime(e.blockExpire, e.coin)) if e.blockExpire)
       list
     catch error
-      Ember.Logger.error('Failed processing unspents for: ', {account, error})
+      Ember.Logger.error('Failed processing unspents: ', error)
 
   #
   #
@@ -54,6 +55,7 @@ CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
         current = acc.get('recoveryInfo.current')
         ts = (if current then Ember.get(current, 'ts') else null)
         acc.set('recentTxs', false)
+        @set('useTimestamps', false)
         waitIdle().then( => @getRecoveryInfo(acc, ts))
     )
     @set('useTimestamps', false)
@@ -100,4 +102,4 @@ CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
 )
 
 
-`export default CmRecoveryInfo`
+export default CmRecoveryInfo

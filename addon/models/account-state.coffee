@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 AccounState = Ember.Object.extend(
 
@@ -9,4 +9,4 @@ AccounState = Ember.Object.extend(
 )
 
 
-'export default AccounState'
+export default AccounState

@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 
 filterProperties = (source, keys...) ->
@@ -15,4 +15,4 @@ mergeProperty = (target, prop, updates) ->
   Ember.set(target, prop, mergedProperty(target, prop, updates))
 
 
-`export { filterProperties, mergedProperty, mergeProperty }`
+export { filterProperties, mergedProperty, mergeProperty }

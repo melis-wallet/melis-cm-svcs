@@ -1,8 +1,8 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
-`import { filterProperties, mergedProperty } from 'melis-cm-svcs/utils/misc'`
-`import PerAccountCtx from 'melis-cm-svcs/mixins/per-account-ctx'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+import { filterProperties, mergedProperty } from 'melis-cm-svcs/utils/misc'
+import PerAccountCtx from 'melis-cm-svcs/mixins/per-account-ctx'
 
 C = CMCore.C
 SVCID = 'address-provider'
@@ -163,13 +163,14 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   #
   ensureCurrent: (account) ->
     return unless @get('inited')
-    return if @get('alreadyRefreshing')
 
     account ?= @get('current.account')
+    return if account.get('refreshingAddress')
+
     ctx = @forAccount(account)
     if Ember.isBlank(address = ctx.get('currentAddress'))
-      @set('alreadyRefreshing', true)
-      @lazyRefreshCurrent(account).finally( => @set('alreadyRefreshing', false))
+      account.set('refreshingAddress', true)
+      @lazyRefreshCurrent(account).finally( => account.set('refreshingAddress', false))
     else
       Ember.RSVP.resolve(address)
 
@@ -314,9 +315,9 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
       addr.get('usedIn').pushObject(tx)
 
     if address && Ember.isEqual(Ember.get(address, 'cmo.address'), txaddress)
-      Ember.Logger.debug "[Addr] current address of account #{account.get('num')} was used."
+      Ember.Logger.debug "[Addr] current address of account #{account.get('pubId')} was used."
       @clearAddress(account)
-
+      @ensureCurrent(account)
 
   #
   #
@@ -354,4 +355,4 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
 
 )
 
-`export default AddressSvc`
+export default AddressSvc

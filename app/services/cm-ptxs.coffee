@@ -1,2 +1,2 @@
-`import CmPtxs from 'melis-cm-svcs/services/cm-ptxs'`
-`export default CmPtxs`
+import CmPtxs from 'melis-cm-svcs/services/cm-ptxs'
+export default CmPtxs

@@ -1,4 +1,4 @@
-`import { attr, Model } from 'ember-cli-simple-store/model'`
+import { attr, Model } from 'ember-cli-simple-store/model'
 
 TxInfo = Model.extend(
   cm:  Ember.inject.service('cm-session')
@@ -22,4 +22,4 @@ TxInfo = Model.extend(
   urgent: false
 )
 
-`export default TxInfo`
+export default TxInfo

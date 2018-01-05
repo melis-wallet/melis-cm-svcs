@@ -1,4 +1,4 @@
-`import { attr, Model } from 'ember-cli-simple-store/model'`
+import { attr, Model } from 'ember-cli-simple-store/model'
 
 Ptx = Model.extend(
   cm:  Ember.inject.service('cm-session')
@@ -84,4 +84,4 @@ Ptx = Model.extend(
   urgent: Ember.computed.alias('accountCanSign')
 )
 
-`export default Ptx`
+export default Ptx

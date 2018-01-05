@@ -1,7 +1,7 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
-`import StreamSupport from 'melis-cm-svcs/mixins/stream-support'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+import StreamSupport from 'melis-cm-svcs/mixins/stream-support'
 
 DELAY = 2000
 REFRESH_DELAY = 8000
@@ -165,4 +165,4 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
 
 )
 
-`export default CmWalletService`
+export default CmWalletService

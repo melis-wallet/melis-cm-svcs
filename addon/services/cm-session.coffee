@@ -1,10 +1,10 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import Configuration from 'melis-cm-svcs/utils/configuration'`
-`import SessionEvents from 'melis-cm-svcs/mixins/session-events'`
-`import ModelFactory from 'melis-cm-svcs/mixins/simple-model-factory'`
-`import Account from 'melis-cm-svcs/models/account'`
-`import { storageFor } from 'ember-local-storage'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import Configuration from 'melis-cm-svcs/utils/configuration'
+import SessionEvents from 'melis-cm-svcs/mixins/session-events'
+import ModelFactory from 'melis-cm-svcs/mixins/simple-model-factory'
+import Account from 'melis-cm-svcs/models/account'
+import { storageFor } from 'ember-local-storage'
 
 C = CMCore.C
 
@@ -16,6 +16,7 @@ TIME_PER_BLOCK = 600
 TFA_PIN_FALLBACK=true
 
 IGNORE_EXS = ['TransitionAborted', 'CmInvalidDeviceException']
+
 
 CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFactory,
 
@@ -76,7 +77,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   walletOpenFailed: false
 
   #
-  # The api endpoint objec
+  # The api endpoint object
   #
   api: null
 
@@ -115,10 +116,6 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   testMode: Configuration.testMode
 
-  #
-  #
-  #
-  block: null
 
   #
   #
@@ -130,22 +127,17 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   locale: Ember.computed.alias('walletstate.locale')
 
-  #
-  #
-  #
-  btcUnits: ['mBTC', 'BTC', 'bits']
-
-  #
-  #
-  #
-  btcUnit: Ember.computed.alias('walletstate.btcUnit')
-
 
   #
   #
   #
   lampField: null
 
+
+  #
+  #
+  #
+  walletMeta: {}
 
   #
   # report errors and other operational states
@@ -185,6 +177,10 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       @get('api').deviceIdHash(id)
   ).property('credentials.deviceId')
 
+  #
+  # Available coins on this backend
+  #
+  availableCoins: ( -> @getWithDefault('config.coins', [])).property('config.coins')
 
   #
   # Ran at initialization
@@ -500,6 +496,47 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     )
 
 
+
+  validateGenerator: (entropy, passphrase) ->
+    creds = @get('credentials')
+
+    return Ember.RSVP.reject(msg: 'Wallet already open') if @get('currentWallet')
+
+    if creds.isGeneratorEncrypted(entropy)
+      if Ember.isBlank(passphrase)
+        Ember.RSVP.reject(msg: 'Encrypted generator and no pass')
+      else
+        try
+          entropy = creds.decryptGenerator(entropy, passphrase)
+        catch e
+          Ember.RSVP.reject(msg: e)
+
+    credentials = creds.prepareCredentials(entropy)
+
+    @get('api').walletOpen(credentials.seed).then((wallet) =>
+      @get('api').walletClose()
+    ).then( ->
+      Ember.Logger.debug '[CM Session] valid credentials'
+      true
+    ).catch( (err) =>
+      Ember.Logger.error  '[CM Session] TryOpen failed: ', err
+      throw err
+    )
+
+
+  validateCredentials: (mnemonic, passphrase) ->
+    creds = @get('credentials')
+
+    try
+      entropy =  creds.importMnemonic(mnemonic, passphrase).entropy
+    catch e
+      return Ember.RSVP.reject(msg: e)
+
+    return Ember.RSVP.reject(msg: 'Import failed') unless entropy
+    @validateGenerator(entropy, passphrase)
+
+
+
   importWallet: (pin, mnemonic, passphrase) ->
     creds = @get('credentials')
 
@@ -524,7 +561,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       else
         try
           generator = creds.decryptGenerator(generator, passphrase)
-        catch
+        catch e
           Ember.RSVP.reject(msg: e)
 
     credentials = creds.initializeCredentials(generator)
@@ -660,13 +697,9 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   walletOpen: (seed) ->
 
-    # close if open
-    # clear current account
-
     @setProperties
       walletOpenFailed: false
       ready: false
-
     try
       deviceId = @get('credentials.deviceId')
     catch
@@ -678,7 +711,8 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     @get('api').walletOpen(seed, sessionName: sessionName, deviceId: deviceId, usePinAsTfa: @get('tfaPinFallback')).then((wallet) =>
       @set('currentWallet', Ember.copy(wallet, true))
       Ember.Logger.debug '[CM Session] wallet open', wallet
-      return(wallet)
+      @_getWalletMetadata()
+      return wallet
     ).catch( (err) =>
       @set('walletOpenFailed', true)
       Ember.Logger.error  '[CM Session] error opening wallet: ', err
@@ -736,8 +770,25 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       throw err
     )
 
+
+  accountRemove: (id) ->
+    Ember.Logger.debug "[CM Session] removing account with id:", id
+
+    acct = @get('accounts').findBy('pubId', id)
+    if acct
+      @get('accounts').removeObject(acct)
+
+
+  accountSecure: (id, state) ->
+    Ember.Logger.debug "[CM Session] secure state account:", state, id
+
+    acct = @get('accounts').findBy('pubId', id)
+    if acct
+      Ember.set(acct, 'secure', state)
+
+
   accountPush: (data) ->
-    acct = @get('accounts').findBy('num', data.account.num)
+    acct = @get('accounts').findBy('pubId', data.account.pubId)
     balance = Ember.get(data, 'balance')
     if acct
       acct.set('cmo', data.account)
@@ -770,8 +821,8 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       throw err
     )
 
-  selectAccount: (index, fallback=false) ->
-    acct = @get('accounts').findBy('num', index)
+  selectAccount: (id, fallback=false) ->
+    acct = @get('accounts').findBy('pubId', id)
     if acct
       @set 'currentAccount', acct
     else if fallback
@@ -807,7 +858,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   refreshAccount: (account) ->
     Ember.Logger.debug  '[CM Session] refreshing account: ', account.get('name')
     @get('api').accountRefresh(account.get('cmo')).then((data) =>
-      acct = @get('accounts').findBy('num', data.account.num)
+      acct = @get('accounts').findBy('pubId', data.account.pubId)
       if acct
         acct.set('cmo', data.account)
         acct.set('balance', data.balance)
@@ -818,13 +869,28 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
   refreshAccounts: ->
     accounts = @get('cm.accounts')
-    @get('accounts').forEach( (acc) => @refreshAccount(acc) )
+    @get('accounts').forEach( (acc) => @refreshAccount(acc))
 
 
-  estimateBlockTime: (block) ->
-    current = @get('api').peekTopBlock().height
-    diff = (block - current)
-    moment().add((diff * TIME_PER_BLOCK), 'seconds').valueOf()
+  findMasterFor: (pubId) ->
+    @get('accounts')?.find((a) ->
+      (a.get('cmo.type') == C.TYPE_COSIGNER) && (a.get('masterAccount.pubId') == pubId)
+    )
+
+  estimateBlockTime: (block, coin) ->
+    if(current = @get('api').peekTopBlock(coin)?.height)
+      diff = (block - current)
+      moment().add((diff * TIME_PER_BLOCK), 'seconds').valueOf()
+
+
+  updateBackupState: (data) ->
+    if data
+      @set('credentials.backupConfirmed', data.backupConfirmed) if data.backupConfirmed
+      @set('credentials.backupChecked', data.backupChecked) if data.backupChecked
+
+      @get('api').walletMetaSet('backupState', @get('credentials.backupState')).then( (res) =>
+        Ember.Logger.debug("Backup state: ", res)
+      )
 
   #
   # sets up the list of accounts when the wallet changes
@@ -835,11 +901,10 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       for index, acct of Ember.get(wallet, 'accounts')
         if !Ember.isBlank(acct)
           obj = @createSimpleModel('account', cmo: acct)
-          #obj.set('info', @get('api').peekAccountInfo()
+          obj.set('info', @get('api').peekAccountInfo(acct))
           obj.set('balance', wallet.balances[index]) if Ember.isPresent(wallet.balances[index])
           accounts.pushObject(obj)
       @set('accounts', accounts)
-
 
     else
       @set('accounts', Ember.A())
@@ -878,6 +943,18 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     @waitForConnect().then( => @get('api').sessionSetParams(locale: @get('locale'), currency: @get('globalCurrency')))
   ).observes('locale', 'globalCurrency')
 
+
+  _getWalletMetadata: ( ->
+    @get('api').walletMetaGet(['backupState', 'coinPrefs']).then( (res) =>
+      if res
+        @set('walletMeta', res)
+        @set('credentials.backupState', state) if state = Ember.get(res, 'backupState')
+    ).catch((err) ->
+      Ember.Logger.error  '[CM Session] getting initial state metadata: ', err
+    )
+  )
+
+
   #
   # make the current account the first in list, if the current is deleted
   #
@@ -890,19 +967,8 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   ).observes('visibleAccts.[]')
 
 
-  #
-  #_setupVisibleAccount: (->
-  #console.error "xxhello"
-  #  if @get('currentWallet') && (accounts = @get('visibleAccts'))
-  #    console.error "xxhere, wtf?", accounts
-  #    unless(accounts.includes(@get('currentAccount')))
-  #      @set('currentAccount', accounts.get('firstObject'))
-  #  else
-  #    @set('currentAccount', null)
-  #).observes('visibleAccts.[]')
-
   _setupTelemetry: ( ->
-    #return if @get('testMode')
+    return if @get('testMode')
 
     report_error = @set('report_error', (e) =>
       return if (Ember.isBlank(e.name) || IGNORE_EXS.includes(e.name))
@@ -929,4 +995,4 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
 )
 
-`export default CmSessionService`
+export default CmSessionService

@@ -1,5 +1,5 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
 
 C = CMCore.C
 
@@ -35,4 +35,4 @@ CmChatService = Ember.Service.extend(Ember.Evented,
 
 )
 
-`export default CmChatService`
+export default CmChatService

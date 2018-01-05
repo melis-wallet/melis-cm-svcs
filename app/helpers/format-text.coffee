@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 formatTextHelper = Ember.Helper.helper((params, options) ->
 
@@ -9,4 +9,4 @@ formatTextHelper = Ember.Helper.helper((params, options) ->
     string
 )
 
-`export default formatTextHelper`
+export default formatTextHelper

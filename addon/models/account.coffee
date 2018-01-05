@@ -1,9 +1,8 @@
-`import Ember from 'ember'`
-`import PtxsSupport from 'melis-cm-svcs/mixins/ptxs-support'`
-`import StreamSupport from 'melis-cm-svcs/mixins/stream-support'`
-`import CMCore from 'npm:melis-api-js'`
-`import { storageFor } from 'ember-local-storage'`
-
+import Ember from 'ember'
+import PtxsSupport from 'melis-cm-svcs/mixins/ptxs-support'
+import StreamSupport from 'melis-cm-svcs/mixins/stream-support'
+import CMCore from 'npm:melis-api-js'
+import { storageFor } from 'ember-local-storage'
 
 
 C = CMCore.C
@@ -13,8 +12,10 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
   num: Ember.computed.alias('cmo.num')
 
   uniqueId: Ember.computed.alias('cmo.pubId')
+  pubId: Ember.computed.alias('cmo.pubId')
 
   name: Ember.computed.alias('cmo.meta.name')
+  pos: Ember.computed.alias('cmo.meta.pos')
 
   #
   #
@@ -48,7 +49,14 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
     Ember.Object.create(id: @get('uniqueId'), modelName: 'account')
   ).property('uniqueId')
 
+  #
+  coin: Ember.computed.alias('cmo.coin')
 
+  #
+  unit: null
+  subunit: Ember.computed.alias('unit.subunit')
+
+  #
   infoModel: (->
     Ember.Object.create(id: @get('uniqueId'), modelName: 'cm-account')
   ).property('uniqueId')
@@ -78,6 +86,11 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
     @get('isMultisig') && (@get('cmo.type') != C.TYPE_COSIGNER)
   ).property('cmo.type')
 
+  masterAccount: ( ->
+    return unless @get('isMultisig')
+    @get('info.cosigners')?.findBy('isMaster', true)
+  ).property('cmo.type', 'info.cosigners.[]')
+
   totalSignatures: (->
     @get('cmo.numCosigners') + 1
   ).property('cmo')
@@ -96,13 +109,15 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
     if @get('hasServer') then !!@get('cmo.lockTimeDays') else true
   ).property('cmo.lockTimeDays', 'hasServer')
 
+  canSignMessage: (->
+     (@get('cmo.type') == C.TYPE_PLAIN_HD)
+  ).property('cmo.type')
+
   completeness: ( ->
     return {count: @get('totalSignatures'), complete: 100} if @get('isComplete')
 
     if cosigners = @get('info.cosigners')
-      count = cosigners.filter((e) ->
-        e.activationDate
-      ).length
+      count = cosigners.filter((e) -> e.activationDate).length
       complete = Math.trunc((count / @get('totalSignatures')) * 100)
     else
       count = 0
@@ -179,6 +194,12 @@ Account.reopenClass(
     'red', 'orange', 'yellow', 'olive', 'green', 'teal', 'blue', 'violet', 'purple', 'pink', 'brown', 'grey'
   ]
 
+  icons: [
+    'no-icon', 'home', 'automobile', 'bank', 'bed', 'bookmark', 'briefcase', 'coffee', 'diamond', 'exchange', 'female', 'flask', 'gavel', 'gift', 'glass',
+    'gamepad', 'heart', 'heartbeat', 'industry', 'institution', 'laptop', 'male', 'motorcycle', 'pie-chart', 'paw', 'plane', 'puzzle-piece', 'shopping-bag',
+    'shopping-basket', 'shopping-cart', 'space-shuttle', 'star', 'taxi', 'ticket', 'trophy', 'truck', 'user-circle'
+  ]
+
   accountTypes: [
     { id: C.TYPE_PLAIN_HD, label: 'plain', canCreate: true }
     { id: C.TYPE_2OF2_SERVER, label: 'twooftwo', canCreate: true }
@@ -190,4 +211,4 @@ Account.reopenClass(
 
 )
 
-`export default Account`
+export default Account

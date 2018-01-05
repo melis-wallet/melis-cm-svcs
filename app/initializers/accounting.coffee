@@ -1,5 +1,4 @@
-`import { currency, number } from "accounting/settings"`
-`import formatBtcHelper from '../helpers/format-btc'`
+import { currency, number } from "accounting/settings"
 
 AccountingInitializer = {
   name: 'accounting.js'
@@ -13,4 +12,4 @@ AccountingInitializer = {
 
 }
 
-`export default AccountingInitializer`
+export default AccountingInitializer

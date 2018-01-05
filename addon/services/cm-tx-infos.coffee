@@ -1,6 +1,6 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
 DELAY = 4000
 PREFETCH_PG_SIZE= 1000
@@ -8,24 +8,7 @@ PREFETCH_PG_SIZE= 1000
 C = CMCore.C
 SVCID = 'tx-infos'
 
-EXPLORERS =
-  main: [
-    { id: 'biteasy',  label: 'Biteasy', url: 'https://www.biteasy.com/blockchain/transactions/%h'}
-    { id: 'blockcypher:',  label: 'Blockcypher', url: 'https://live.blockcypher.com/btc/tx/%h/'}
-    { id: 'blockchain', label: 'Blockchain.info', url: 'https://blockchain.info/tx/%h'}
-    { id: 'blocktrail', label: 'BlockTrail', url: 'https://www.blocktrail.com/BTC/tx/%h'}
-    { id: 'chainso', label: 'chain.so', url: 'https://chain.so/tx/BTC/%h'}
-    { id: 'blockr', label: 'blockr.io', url: 'http://blockr.io/tx/info/%h'}
-  ]
 
-  test: [
-    { id: 'blockr', label: 'blockr.io', url: 'http://tbtc.blockr.io/tx/info/%h'}
-    { id: 'blocktrail',  label: 'BlockTrail', url: 'https://www.blocktrail.com/tBTC/tx/%h'}
-  ]
-  regtest: [
-    { id: 'melis', label: 'melis.io', url: 'https://localhost/test/%h'}
-    { id: 'melis2',  label: 'regtest.melis.io', url: 'https://localhost/test2/%h'}
-  ]
 
 CmTxInfoService = Ember.Service.extend(Ember.Evented,
   cm:  Ember.inject.service('cm-session')
@@ -35,42 +18,6 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
 
   inited: false
 
-  explorers: ( ->
-    if (network = @get('cm.network'))
-      EXPLORERS[network]
-    else
-      Ember.A()
-  ).property('cm.network')
-
-  blockExplorer: Ember.computed.alias('cm.walletstate.blockExplorer')
-
-  #
-  #
-  #
-  currentExplorer: ( ->
-    { explorers, blockExplorer } = @getProperties('explorers', 'blockExplorer')
-
-    return if (Ember.isEmpty('explorers') || Ember.isBlank(blockExplorer))
-
-    explorers.findBy('id', blockExplorer)
-  ).property('explorers', 'blockExplorer')
-
-
-  #
-  #
-  #
-  urlToExplorer: (hash) ->
-    if hash && (ex = @get('currentExplorer'))
-      if (url =  Ember.get(ex, 'url'))
-        url.replace('\%h', hash)
-
-  #
-  #
-  #
-  selectDefaultExplorer: ->
-    unless (@get('blockExplorer') || Ember.isEmpty(exs = @get('explorers')))
-      ex = exs[Math.floor(Math.random() * exs.length)]
-      @set('blockExplorer', Ember.get(ex, 'id'))
 
   #
   #
@@ -294,7 +241,6 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
     Ember.Logger.info  "== Starting tx-info service"
     @setupListeners()
     @initPrefetch()
-    @selectDefaultExplorer()
   ).on('init')
 
 
@@ -322,4 +268,4 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
 
 )
 
-`export default CmTxInfoService`
+export default CmTxInfoService

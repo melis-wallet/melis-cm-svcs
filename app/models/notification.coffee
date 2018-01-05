@@ -1,2 +1,2 @@
-`import Notification from 'melis-cm-svcs/models/notification'`
-`export default Notification`
+import Notification from 'melis-cm-svcs/models/notification'
+export default Notification

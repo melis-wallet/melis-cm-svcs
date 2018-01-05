@@ -54,6 +54,5 @@ test 'access some account property', (assert) ->
   done = assert.async()
 
   service.on 'init-finished', ->
-    console.error "ZZZZZZZZZZZZZZ",  session.get('currentAccount')
     assert.equal session.get('currentAccount.amSummary'), 0
     done()

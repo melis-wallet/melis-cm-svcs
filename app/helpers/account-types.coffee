@@ -1,5 +1,5 @@
-`import Ember from 'ember'`
-`import Account from 'melis-cm-svcs/models/account'`
+import Ember from 'ember'
+import Account from 'melis-cm-svcs/models/account'
 
 AccountTypes = Ember.Helper.extend(
 
@@ -19,4 +19,4 @@ AccountTypes = Ember.Helper.extend(
 
 )
 
-`export default AccountTypes`
+export default AccountTypes

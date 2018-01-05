@@ -1,4 +1,4 @@
-`import loadConfig from 'melis-cm-svcs/utils/load-config'`
+import loadConfig from 'melis-cm-svcs/utils/load-config'
 
 defaults = {
   stompEndpoint: null
@@ -20,4 +20,4 @@ Configuration = {
   )
 }
 
-`export default Configuration`
+export default Configuration

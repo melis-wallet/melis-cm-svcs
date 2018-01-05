@@ -1,11 +1,8 @@
-`import Ember from 'ember'`
-`import { storageFor } from 'ember-local-storage'`
-
-`import Melis from 'npm:melis-credentials-seed'`
-
-`import CMCore from 'npm:melis-api-js'`
-
-`import wordlist_IT from 'melis-cm-svcs/utils/wordlists/it'`
+import Ember from 'ember'
+import { storageFor } from 'ember-local-storage'
+import Melis from 'npm:melis-credentials-seed'
+import CMCore from 'npm:melis-api-js'
+import wordlist_IT from 'melis-cm-svcs/utils/wordlists/it'
 
 sjcl = CMCore.sjcl
 
@@ -29,8 +26,11 @@ CmCredentialsService = Ember.Service.extend(
   encryptedSeed: Ember.computed.alias('credstore.encryptedSeed')
 
   pinAttemptsLeft:  Ember.computed.alias('credstore.pinAttemptsLeft')
-  backupConfirmed:  Ember.computed.alias('credstore.backupConfirmed')
-  backupChecked:  Ember.computed.alias('credstore.backupChecked')
+
+  backupState:  { backupConfirmed: false, backupChecked: false }
+
+  backupConfirmed:  Ember.computed.alias('backupState.backupConfirmed')
+  backupChecked:  Ember.computed.alias('backupState.backupChecked')
 
   #
   # do we have a set of valid credentials
@@ -56,10 +56,14 @@ CmCredentialsService = Ember.Service.extend(
 
   initializeCredentials: (entropy) ->
     @reset()
+    entropy ||= @initializeGenerator()
+    @prepareCredentials(entropy)
 
+
+  prepareCredentials: (entropy) ->
     language = language?.substring(0, 2).toLowerCase() || 'en'
 
-    entropy ||= @initializeGenerator()
+    Ember.assert('No entropy', !Ember.isBlank(entropy))
     seed = @entropyToSeed(entropy)
 
     return(seed: seed, entropy: entropy)
@@ -150,8 +154,6 @@ CmCredentialsService = Ember.Service.extend(
   # --
   generateMnemonic: (entropy, language) ->
     @credseed.generateMnemonic(entropy, language)
-    #language ||= 'en'
-    #Bip39.entropyToMnemonic(entropy, @wordListFor(language))
 
 
   # --
@@ -161,7 +163,6 @@ CmCredentialsService = Ember.Service.extend(
   # --
   entropyToSeed: (entropy) ->
     @credseed.entropyToSeed(entropy)
-    #Bip39.mnemonicToSeedHex(entropy).slice(0, @SEED_SIZE)
 
 
   encryptSecret: (key, secret, adata) ->
@@ -203,4 +204,4 @@ CmCredentialsService = Ember.Service.extend(
     @credseed.inferWordList(mnemonic)
 )
 
-`export default CmCredentialsService`
+export default CmCredentialsService

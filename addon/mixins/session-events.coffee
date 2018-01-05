@@ -45,13 +45,12 @@ SessionEvents = Ember.Mixin.create
     api.on C.EVENT_CONFIG, (config) =>
       Ember.Logger.info '[CM Session] Config Updated', config
       @set('config', config)
-      @set('block', config.topBlock)
 
 
     api.on C.EVENT_ACCOUNT_UPDATED, (data) =>
       Ember.Logger.info '[CM Session] Account Updated', data
 
-      acct = @get('accounts').findBy('num', data.account.num)
+      acct = @get('accounts').findBy('pubId', data.account.pubId)
       if acct
         if Ember.get(data, 'account.hidden') && !@get('currentWallet.info.isPrimaryDevice')
           # account has been hidden and we're not the primary device, consider it gone
@@ -59,6 +58,12 @@ SessionEvents = Ember.Mixin.create
         else
           acct.set('cmo', data.account)
           acct.set('balance', data.balance)
+      else if (master = @findMasterFor(data.account.pubId))
+        # FIXME FIXME
+        # this is a Q&D fix for the server sometimes sending the wrong balance update for the master of a multisig
+        # account to a co-signer. We find its master
+        Ember.Logger.warn "[CM Session] Got an update for master account '#{data.account.pubId}' instead of '#{master.get('pubId')}'"
+        master.set('balance', data.balance)
       else
         # can happen on account unhide
         Ember.Logger.info '[CM Session] New Account in update event', data
@@ -66,21 +71,22 @@ SessionEvents = Ember.Mixin.create
 
     api.on C.EVENT_ACCOUNT_DELETED, (data) =>
       Ember.Logger.info '[CM Session] Account Deleted', data
-      num = Ember.get(data, 'account.num')
-      acct = @get('accounts').findBy('num', data.account.num)
-      if acct
-        @get('accounts').removeObject(acct)
+
+      if (acct = Ember.get(data, 'accountPubId'))
+        @accountRemove(acct)
 
 
     api.on C.EVENT_NEW_ACCOUNT, (data) =>
-      if !@get('accounts').findBy('num', data.account.num)
+      if !@get('accounts').findBy('pubId', data.account.pubId)
         Ember.Logger.info '[CM Session] New Account', data
         @accountPush(data)
+      else
+        # TBD when we have the event for unhide
 
 
     api.on C.EVENT_BLOCK, (data) =>
       Ember.Logger.info('[CM Session] New block: ', data)
-      @set('block', data)
+      @trigger('new-block', data)
 
 
     api.on C.EVENT_DEVICE_DELETED, (data) =>
@@ -112,4 +118,4 @@ SessionEvents = Ember.Mixin.create
 
 
 
-`export default SessionEvents`
+export default SessionEvents

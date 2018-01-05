@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 
 CmAddressbook = Ember.Service.extend(
@@ -32,9 +32,7 @@ CmAddressbook = Ember.Service.extend(
   # TODO needs pagination
   #
   findAll: ->
-    @fetchAll().then( =>
-      @get('store').find('ab-entry')
-    )
+    @fetchAll().then( => @get('store').find('ab-entry'))
 
 
   find: (id) ->
@@ -45,6 +43,7 @@ CmAddressbook = Ember.Service.extend(
 
   push: (entry) ->
     api = @get('cm.api')
+    Ember.Logger.debug('[abook] push: ', Ember.get(entry, 'serialized'))
     api.abAdd(Ember.get(entry, 'serialized')).then((res) =>
       @get('store').push('ab-entry', res.entry)
     ).catch((err) ->
@@ -55,6 +54,7 @@ CmAddressbook = Ember.Service.extend(
 
   update: (entry) ->
     api = @get('cm.api')
+    Ember.Logger.debug('[abook] update: ', Ember.get(entry, 'serialized'))
     api.abUpdate(Ember.get(entry, 'serialized')).then((res) =>
       @get('store').push('ab-entry', res.entry)
     ).catch((err) ->
@@ -65,6 +65,7 @@ CmAddressbook = Ember.Service.extend(
 
   delete: (entry) ->
     api = @get('cm.api')
+    Ember.Logger.debug('[abook] delete: ', Ember.get(entry, 'serialized'))
     api.abDelete(Ember.get(entry, 'serialized')).then((res) =>
       @get('store').remove('ab-entry', entry.id)
     ).catch((err) ->
@@ -74,4 +75,4 @@ CmAddressbook = Ember.Service.extend(
 
 )
 
-`export default CmAddressbook`
+export default CmAddressbook

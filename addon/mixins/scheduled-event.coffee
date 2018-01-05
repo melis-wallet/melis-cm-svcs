@@ -1,4 +1,4 @@
-`import Ember from 'ember'`
+import Ember from 'ember'
 
 ScheduledEvent = Ember.Mixin.create
 
@@ -25,4 +25,4 @@ ScheduledEvent = Ember.Mixin.create
 
 
 
-`export default ScheduledEvent`
+export default ScheduledEvent

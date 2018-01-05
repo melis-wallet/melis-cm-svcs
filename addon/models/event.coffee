@@ -1,5 +1,5 @@
-`import { attr, Model } from 'ember-cli-simple-store/model'`
-`import CMCore from 'npm:melis-api-js'`
+import { attr, Model } from 'ember-cli-simple-store/model'
+import CMCore from 'npm:melis-api-js'
 
 C = CMCore.C
 
@@ -29,4 +29,4 @@ Event = Model.extend(
   urgent: false
 )
 
-`export default Event`
+export default Event

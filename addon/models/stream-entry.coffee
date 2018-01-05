@@ -1,5 +1,5 @@
-`import Ember from 'ember'`
-`import { attr, Model } from 'ember-cli-simple-store/model'`
+import Ember from 'ember'
+import { attr, Model } from 'ember-cli-simple-store/model'
 
 StreamEntry = Model.extend(
 
@@ -19,4 +19,4 @@ StreamEntry = Model.extend(
 )
 
 
-`export default StreamEntry`
+export default StreamEntry

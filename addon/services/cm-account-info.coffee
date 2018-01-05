@@ -1,6 +1,6 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
+import Ember from 'ember'
+import CMCore from 'npm:melis-api-js'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
 C = CMCore.C
 
@@ -23,8 +23,8 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   #
   #
   setupCurrentLabels: (account) ->
-    if account = @get('cm.currentAccount')
-      @getLabelsFor(account)
+    account ||= @get('cm.currentAccount')
+    @getLabelsFor(account) if account
 
   #
   #
@@ -57,12 +57,15 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   #
   #
   #
-  accountGetInfo: (account, force) ->
+  accountGetInfo: (account) ->
+    account.set('info', @get('cm.api').peekAccountInfo(account.get('cmo')))
+
+    return
 
     if force || Ember.isBlank(account.get('info'))
       api = @get('cm.api')
       api.accountGetInfo(account.get('cmo')).then((res) =>
-        Ember.Logger.debug("Account info for #{account.num}: ", res)
+        Ember.Logger.debug("Account info for #{account.pubId}: ", res)
         account.set('info', res)
 
       ).catch((err) ->
@@ -77,7 +80,7 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
     if @get('cm.ready') && (account = @get('cm.currentAccount'))
       waitIdleTime(LABELS_DELAY).then( => @getLabelsFor(account, true) unless @get('isDestroyed'))
       @accountGetInfo(account)
-  ).observes('cm.currentAccount').on('init')
+  ).observes('cm.currentAccount')
 
 
   #
@@ -151,6 +154,23 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   ).on('willDestroy')
 
 
+
+  #
+  #
+  #
+  estimateTxSizeFor: (account, numInputs=1, numOutputs=2) ->
+    cm =  @get('cm.api')
+
+    { totalSignatures,
+      minSignatures,
+      hasServer} = Ember.getProperties(account, 'totalSignatures', 'minSignatures', 'hasServer')
+
+    plus = if hasServer then 1 else 0
+    numPubKeys = totalSignatures + plus
+    minSigs = minSignatures + plus
+    cm.estimateTxSize(numInputs, numOutputs, cm.estimateInputSigSize(numPubKeys, minSigs))
+
+
   #
   #
   #
@@ -190,10 +210,11 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
     self = @
     @get('cm').waitForReady().then( -> waitIdleTime(DELAY)).then( ->
       self.prepareAccounts() unless self.get('isDestroyed')
-    ).then( ->
+    ).then( =>
+      @setupCurrentLabels()
       self.trigger('init-finished')
     ).catch((err) ->
-      Ember.Logger.error('[Accunt Info] Error during init: '. err)
+      Ember.Logger.error('[Account Info] Error during init: '. err)
       throw err
     )
 
@@ -201,4 +222,4 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
 
 )
 
-`export default CmAccountInfo`
+export default CmAccountInfo

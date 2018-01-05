@@ -1,5 +1,5 @@
-`import { attr, Model } from 'ember-cli-simple-store/model'`
-`import CMCore from 'npm:melis-api-js'`
+import { attr, Model } from 'ember-cli-simple-store/model'
+import CMCore from 'npm:melis-api-js'
 
 C = CMCore.C
 
@@ -11,6 +11,7 @@ AbEntry = Model.extend(
   val: attr()
   labels: attr()
   meta: attr()
+  coin: attr()
 
   avatarUrl: null
 
@@ -19,7 +20,7 @@ AbEntry = Model.extend(
   ).property('name')
 
   isAddress: Ember.computed.equal('type', C.AB_TYPE_ADDRESS)
-  isCm: Ember.computed.equal('type', C.AB_TYPE_CM)
+  isCm: Ember.computed.equal('type', C.AB_TYPE_MELIS)
 
   address: Ember.computed('val',
     get: (key) ->
@@ -32,11 +33,10 @@ AbEntry = Model.extend(
 
   pubId: Ember.computed('val',
     get: (key) ->
-      if @get('isCm')
-        @get 'val'
+      @get 'val' if @get('isCm')
     set: (key, value) ->
-      if @get('isCm')
-        @set 'val', value
+      @set 'val', value if @get('isCm')
+
   )
 
   name: Ember.computed('meta',
@@ -59,11 +59,9 @@ AbEntry = Model.extend(
       value
   )
 
-  serialized: ( ->
-    @getProperties('id', 'type', 'label', 'meta', 'val')
-  ).property().volatile()
+  serialized: ( -> @getProperties('id', 'type', 'label', 'meta', 'val', 'coin')).property().volatile()
 
 
 )
 
-`export default AbEntry`
+export default AbEntry
