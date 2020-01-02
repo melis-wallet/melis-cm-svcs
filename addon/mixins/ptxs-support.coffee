@@ -1,25 +1,28 @@
-import Ember from 'ember'
+import EmberObject from '@ember/object'
+import Mixin from '@ember/object/mixin'
+import { sort, filterBy, alias } from '@ember/object/computed'
+
 import CMCore from 'npm:melis-api-js'
 
 C = CMCore.C
 
-PtxsContext = Ember.Object.extend(
+PtxsContext = EmberObject.extend(
   list: null
 
   sorting: ['cmo.cd:desc']
-  sorted:  Ember.computed.sort('list', 'sorting')
+  sorted:  sort('list', 'sorting')
 
-  active: Ember.computed.filterBy('sorted', 'isActive', true)
-  waiting: Ember.computed.filterBy('sorted', 'isWaiting', true)
+  active: filterBy('sorted', 'isActive', true)
+  waiting: filterBy('sorted', 'isWaiting', true)
 
-  signable: Ember.computed.filterBy('sorted', 'accountCanSign', true)
+  signable: filterBy('sorted', 'accountCanSign', true)
 
   # might change: "relevant" means show them in summaries where it's not important if you can sign them or not
-  relevant: Ember.computed.alias('waiting')
+  relevant: alias('waiting')
 )
 
 
-PtxsSupport = Ember.Mixin.create(
+PtxsSupport = Mixin.create(
 
   init: ->
     @_super(arguments...)

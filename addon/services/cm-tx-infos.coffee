@@ -1,6 +1,14 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from "@ember/object/evented"
+import { get, set, getProperties } from "@ember/object"
+import { isBlank, isNone, isEmpty } from "@ember/utils"
+import RSVP from 'rsvp'
+
 import CMCore from 'npm:melis-api-js'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+
+import Logger from 'melis-cm-svcs/utils/logger'
+
 
 DELAY = 4000
 PREFETCH_PG_SIZE= 1000
@@ -10,11 +18,11 @@ SVCID = 'tx-infos'
 
 
 
-CmTxInfoService = Ember.Service.extend(Ember.Evented,
-  cm:  Ember.inject.service('cm-session')
-  stream: Ember.inject.service('cm-stream')
-  store: Ember.inject.service('simple-store')
-  recovery : Ember.inject.service('cm-recovery-info')
+CmTxInfoService = Service.extend(Evented,
+  cm:  service('cm-session')
+  stream: service('cm-stream')
+  store: service('simple-store')
+  recovery : service('cm-recovery-info')
 
   inited: false
 
@@ -27,7 +35,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
 
     fromDate = moment().subtract(15, 'days').unix() * 1000
 
-    Ember.RSVP.all(accounts.map((account) =>
+    RSVP.all(accounts.map((account) =>
       @prefetch(account, fromDate)
     )).then( =>
       @trigger('prefetch-finished')
@@ -40,7 +48,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
   getPage: (account, fromDate, page = 0) ->
     api = @get('cm.api')
     self = @
-    Ember.Logger.debug('[txi] - Getting page: ', page,  account.get('name'), moment(fromDate).toDate())
+    Logger.debug('[txi] - Getting page: ', page,  account.get('name'), moment(fromDate).toDate())
     api.txInfosGet(account.get('cmo'), {
         fromDate: fromDate
         direction:  C.DIR_ASCENDING
@@ -56,14 +64,14 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
       )
       txs
     ).catch((err) ->
-      Ember.Logger.error('Failed getting tx infos', err)
+      Logger.error('Failed getting tx infos', err)
       throw err
     )
 
 
 
   prefetch: (account, fromDate) ->
-    Ember.Logger.debug('[txi] - Prefetching account: ', account.get('name'), moment(fromDate).toDate())
+    Logger.debug('[txi] - Prefetching account: ', account.get('name'), moment(fromDate).toDate())
     @getPage(account, fromDate, 0).then((txs) =>
       account.set('sstate.lastTxinfoFetch', txs.ts)
       @trigger('load-finished', account, fromDate)
@@ -86,7 +94,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
   #
   #
   txiFetch: (account, fromDate) ->
-    Ember.Logger.debug('[txi] - Fetching account: ', account.get('name'), moment(fromDate).toDate())
+    Logger.debug('[txi] - Fetching account: ', account.get('name'), moment(fromDate).toDate())
     @getPage(account, fromDate, 0).then((txs) =>
       account.setProperties
         txiFetchDate: fromDate
@@ -113,7 +121,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
   fetchAllTx: (fromDate) ->
     fromDate ||= (moment().subtract(1, 'days').unix() * 1000)
     if (accounts = @get('cm.accounts'))
-      Ember.RSVP.all(accounts.map((account) =>
+      RSVP.all(accounts.map((account) =>
         @prefetch(account, fromDate)
       )).then( =>
         @trigger('load-all-finished', fromDate)
@@ -160,7 +168,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
     store = @get('store')
     tx = store.find('txinfo', id)
     if tx
-      Ember.RSVP.resolve(tx)
+      RSVP.resolve(tx)
     else
       @get('cm.api').txInfoGet(id).then((res) =>
         @addTx(res)
@@ -197,7 +205,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
     @get('cm').waitForReady().then( ->
       waitIdleTime(DELAY)
     ).then( ->
-      self.trigAcctPrefetch()
+      self.trigAcctPrefetch() unless self.get('isDestroyed')
     ).then( -> self.doneInit() unless self.get('isDestroyed'))
 
 
@@ -228,7 +236,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
   #
   refreshTxs: ->
     if @get('cm.connected') && @get('inited')
-      Ember.Logger.debug('- Refreshing txs in', DELAY)
+      Logger.debug('- Refreshing txs in', DELAY)
       # tentatively go two hours back, to fetch modifications (vs new txs) that happened while we were asleep
       fromDate = (@get('cm.lastRefresh') || (moment.now() * 1000)) - 7200000
       waitIdleTime(DELAY).then( => @fetchAllTx(fromDate))
@@ -238,7 +246,7 @@ CmTxInfoService = Ember.Service.extend(Ember.Evented,
   #
   #
   setup: ( ->
-    Ember.Logger.info  "== Starting tx-info service"
+    Logger.info  "== Starting tx-info service"
     @setupListeners()
     @initPrefetch()
   ).on('init')

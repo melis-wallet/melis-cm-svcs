@@ -1,28 +1,37 @@
-import Ember from 'ember'
+import EmberObject, { computed, get, set, getProperties, getWithDefault } from '@ember/object'
+import Service, { inject as service } from '@ember/service'
+import Evented from '@ember/object/evented'
+import { alias, bool } from '@ember/object/computed'
+import { isBlank, isNone, isEmpty, isEqual } from '@ember/utils'
+import RSVP from 'rsvp'
 import CMCore from 'npm:melis-api-js'
+
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 import { filterProperties, mergedProperty } from 'melis-cm-svcs/utils/misc'
 import PerAccountCtx from 'melis-cm-svcs/mixins/per-account-ctx'
+
+import Logger from 'melis-cm-svcs/utils/logger'
+
 
 C = CMCore.C
 SVCID = 'address-provider'
 DELAY = 2000
 
-AccountCtx = Ember.Object.extend(
+AccountCtx = EmberObject.extend(
 
   fetched: false
 
   account: null
-  storedAddress: Ember.computed.alias('account.sstate.receiveAddr')
+  storedAddress: alias('account.sstate.receiveAddr')
   _currentAddress: null
 
 
-  currentAddress: Ember.computed('_currentAddress',
+  currentAddress: computed('_currentAddress',
     get: (key) ->
       @get('_currentAddress')
 
     set: (key, val) ->
-      if val && (cmo = Ember.get(val, 'cmo'))
+      if val && (cmo = get(val, 'cmo'))
         @set('storedAddress', cmo)
       @set('_currentAddress', val)
   )
@@ -33,14 +42,14 @@ AccountCtx = Ember.Object.extend(
 #
 # provides addresses to the current account
 #
-AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
+AddressSvc = Service.extend(PerAccountCtx, Evented,
   ctxContainer: AccountCtx
 
-  cm: Ember.inject.service('cm-session')
-  stream: Ember.inject.service('cm-stream')
+  cm: service('cm-session')
+  stream: service('cm-stream')
 
-  store: Ember.inject.service('simple-store')
-  txsvc: Ember.inject.service('cm-tx-infos')
+  store: service('simple-store')
+  txsvc: service('cm-tx-infos')
 
   inited: false
 
@@ -58,13 +67,13 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
 
     return unless account
 
-    if Ember.isBlank(address = ctx.get('storedAddress')) || !Ember.get(address, 'address')
+    if isBlank(address = ctx.get('storedAddress')) || !get(address, 'address')
       if @get('prefetchAddrs')
         waitIdleTime(200).then( => @getCurrentAddress(account))
-      else Ember.RSVP.resolve()
+      else RSVP.resolve()
     else
       if (addr = ctx.get('currentAddress'))
-        Ember.RSVP.resolve(addr)
+        RSVP.resolve(addr)
       else
         waitIdle().then( => @refreshCurrentAddress(account, address))
 
@@ -93,24 +102,24 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   updateCurrentAddress: (account, updates) ->
     account ?= @get('current.account')
     current = @forAccount(account).get('currentAddress')
-    Ember.Logger.info '[Addr] update: ', current
+    Logger.info '[Addr] update: ', current
 
-    if current && (address = Ember.get(current, 'cmo.address'))
+    if current && (address = get(current, 'cmo.address'))
       meta = mergedProperty(current, 'meta', filterProperties(updates, 'info', 'amount'))
-      labels = Ember.get(updates, 'labels') || Ember.get(address, 'labels')
+      labels = get(updates, 'labels') || get(address, 'labels')
       @getUnusedAddress(account, address, labels, meta).then((addr) =>
         @forAccount(account).set('currentAddress', addr)
       )
     else
-      Ember.RSVP.resolve()
+      RSVP.resolve()
 
   #
   #
   #
   refreshAddress: (account, current) ->
     account ?= @get('current.account')
-    {address, labels, meta} = val = Ember.getProperties(current, 'address', 'labels', 'meta')
-    Ember.Logger.debug '[Addr] refresh: ', val
+    {address, labels, meta} = val = getProperties(current, 'address', 'labels', 'meta')
+    Logger.debug '[Addr] refresh: ', val
     @getUnusedAddress(account, address, labels, meta)
 
 
@@ -120,8 +129,8 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   requestNewAddress: (account, data =  {}) ->
     account ?= @get('current.account')
 
-    {labels, info, amount} = val = Ember.getProperties(data, 'labels', 'info', 'amount')
-    Ember.Logger.debug '[Addr] request new: ', val
+    {labels, info, amount} = val = getProperties(data, 'labels', 'info', 'amount')
+    Logger.debug '[Addr] request new: ', val
     @getUnusedAddress(account, null, labels, {info: info, amount: amount})
 
 
@@ -131,24 +140,24 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   getUnusedAddress: (account, address, labels, meta) ->
     account ?= @get('current.account')
 
-    return Ember.RSVP.resolve() unless account.get('isComplete')
+    return RSVP.resolve() unless account.get('isComplete')
 
     if(acct = account.get('cmo'))
-      Ember.Logger.debug "[Addr] Requesting: ", {address: address, labels: labels, meta: meta}
+      Logger.debug "[Addr] Requesting: ", {address: address, labels: labels, meta: meta}
       @get('cm.api').getUnusedAddress(acct, address, labels, meta).then((res) =>
-        newaddr = Ember.getProperties(res, 'address', 'meta', 'labels', 'cd')
-        Ember.Logger.debug "[Addr] got address: ", newaddr
+        newaddr = getProperties(res, 'address', 'meta', 'labels', 'lastRequested', 'cd')
+        Logger.debug "[Addr] got address: ", newaddr
         if newaddr && newaddr.address
           @updateAddr(id: newaddr.address, account: account, cmo: newaddr)
       ).catch((err) ->
         if err.ex == 'CmMissingCosignerException'
-          Ember.Logger.error  '[Addr] error getting an address: account is incomplete'
+          Logger.error  '[Addr] error getting an address: account is incomplete'
         else
-          Ember.Logger.error  '[Addr] error getting an address: ', err
+          Logger.error  '[Addr] error getting an address: ', err
           throw err
       )
     else
-      Ember.RSVP.reject('invalid account')
+      RSVP.reject('invalid account')
 
   #
   #
@@ -168,54 +177,54 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
     return if account.get('refreshingAddress')
 
     ctx = @forAccount(account)
-    if Ember.isBlank(address = ctx.get('currentAddress'))
+    if isBlank(address = ctx.get('currentAddress'))
       account.set('refreshingAddress', true)
       @lazyRefreshCurrent(account).finally( => account.set('refreshingAddress', false))
     else
-      Ember.RSVP.resolve(address)
+      RSVP.resolve(address)
 
   #
   #
   #
   releaseAddress: (address) ->
-    { account, cmo } = Ember.getProperties(address, 'account', 'cmo')
+    { account, cmo } = getProperties(address, 'account', 'cmo')
     if(acct = account.get('cmo'))
       @get('cm.api').addressRelease(acct, cmo.address).then((res) =>
-        newaddr = Ember.getProperties(res, 'address', 'meta', 'labels', 'cd')
-        Ember.Logger.debug "[Addr] released address: ", newaddr
+        newaddr = getProperties(res, 'address', 'meta', 'labels', 'cd')
+        Logger.debug "[Addr] released address: ", newaddr
         if newaddr && newaddr.address
           @updateAddr(id: newaddr.address, account: account, cmo: newaddr)
       ).catch((err) ->
-        Ember.Logger.error '[Addr] Address release error', err
+        Logger.error '[Addr] Address release error', err
       )
     else
-      Ember.RSVP.reject('invalid account')
+      RSVP.reject('invalid account')
 
   #
   #
   #
   updateAddress: (address, updates) ->
-    { account, cmo } = Ember.getProperties(address, 'account', 'cmo')
-    Ember.Logger.info '[Addr] update address: ', cmo, updates
+    { account, cmo } = getProperties(address, 'account', 'cmo')
+    Logger.info '[Addr] update address: ', cmo, updates
     meta = mergedProperty(cmo, 'meta', filterProperties(updates, 'info', 'amount'))
 
-    Ember.Logger.debug "[Addr] meta: ", meta, filterProperties(updates, 'info', 'amount')
-    labels = Ember.get(updates, 'labels') || Ember.get(cmo, 'labels')
+    Logger.debug "[Addr] meta: ", meta, filterProperties(updates, 'info', 'amount')
+    labels = get(updates, 'labels') || get(cmo, 'labels')
 
     if(acct = account.get('cmo'))
       meta.requested ||= moment.now()
       @get('cm.api').addressUpdate(acct, cmo.address, labels, meta).then((res) =>
 
-        newaddr = Ember.getProperties(res, 'address', 'meta', 'labels', 'cd')
-        Ember.Logger.debug "[Addr] updated address: ", newaddr
+        newaddr = getProperties(res, 'address', 'meta', 'labels', 'cd')
+        Logger.debug "[Addr] updated address: ", newaddr
         if newaddr && newaddr.address
           @updateAddr(id: newaddr.address, account: account, cmo: newaddr)
 
       ).catch((err) ->
-        Ember.Logger.error '[Addr] Address update error', err
+        Logger.error '[Addr] Address update error', err
       )
     else
-      Ember.RSVP.reject('invalid account')
+      RSVP.reject('invalid account')
 
 
   #
@@ -225,7 +234,7 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
     account ?= @get('current.account')
     ctx = @forAccount(account)
 
-    if current = Ember.get(ctx, 'currentAddress')
+    if current = get(ctx, 'currentAddress')
       @requestNewAddress(account, {}).then( (addr) =>
         @forAccount(account).set('currentAddress', addr)
         @updateAddress(current, updates)
@@ -267,7 +276,7 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   fetchActiveAddrs: (account, force) ->
     ctx = @forAccount(account)
     if force || !ctx.get('fetched')
-      acc = Ember.get(account, 'cmo')
+      acc = get(account, 'cmo')
       api = @get('cm.api')
 
       self = @
@@ -275,10 +284,10 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
         res.list.forEach((a) ->  self.updateAddr(id: a.address, account: account, cmo: a, active: true))
         ctx.set('fetched', true)
       ).catch((err) ->
-        Ember.Logger.error '[Addr] error getting addresses for address', err
+        Logger.error '[Addr] error getting addresses for address', err
       )
     else
-      Ember.RSVP.resolve()
+      RSVP.resolve()
 
 
   #
@@ -288,8 +297,8 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
     accounts = @get('cm.accounts')
     accounts.some( (acc) =>
       if acc.get('cmo.pubId') == data.accountPubId || acc.get('cmo.masterPubId') == data.accountPubId
-        Ember.Logger.debug "[Addr] updated", data
-        @updateAddr(id: data.aa.address, account: acc, cmo: data.aa, active: !Ember.isBlank(data.aa?.meta))
+        Logger.debug "[Addr] updated", data
+        @updateAddr(id: data.aa.address, account: acc, cmo: data.aa, active: !isBlank(data.aa?.meta))
     )
 
 
@@ -297,7 +306,7 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   #
   #
   accountHasChanged: ( ->
-    if (account = @get('current.account')) && Ember.get(account, 'isComplete')
+    if (account = @get('current.account')) && get(account, 'isComplete')
       @ensureCurrent(account)
       @fetchActiveAddrs(account)
   ).observes('current.account')
@@ -307,15 +316,15 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
   #
   #
   newTx: (tx) ->
-    account = Ember.get(tx, 'account')
-    txaddress = Ember.get(tx, 'cmo.address')
+    account = get(tx, 'account')
+    txaddress = get(tx, 'cmo.address')
     address = @forAccount(account).get('currentAddress')
     if addr = @findAddr(txaddress)
-      Ember.Logger.debug "[Addr] found an address matching this tx."
+      Logger.debug "[Addr] found an address matching this tx."
       addr.get('usedIn').pushObject(tx)
 
-    if address && Ember.isEqual(Ember.get(address, 'cmo.address'), txaddress)
-      Ember.Logger.debug "[Addr] current address of account #{account.get('pubId')} was used."
+    if address && isEqual(get(address, 'cmo.address'), txaddress)
+      Logger.debug "[Addr] current address of account #{account.get('pubId')} was used."
       @clearAddress(account)
       @ensureCurrent(account)
 
@@ -328,7 +337,7 @@ AddressSvc = Ember.Service.extend(PerAccountCtx, Ember.Evented,
     @get('stream').serviceInited(SVCID)
 
   setup: ( ->
-    Ember.Logger.info "- Starting Address Service"
+    Logger.info "- Starting Address Service"
     api = @get('cm.api')
 
     @_updateAddress = (data) => @dispatchAddressUpd(data)

@@ -1,12 +1,2 @@
-import Ember from 'ember'
-
-formatTextHelper = Ember.Helper.helper((params, options) ->
-
-  string = params[0]
-  if(string && options && options.len && (string.length > options.len))
-    string.substring(0, options.len - 3) + '...'
-  else
-    string
-)
-
-export default formatTextHelper
+import FormatText from 'melis-cm-svcs/helpers/format-text'
+export default FormatText

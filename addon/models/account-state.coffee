@@ -1,6 +1,6 @@
-import Ember from 'ember'
+import EmberObject, { computed } from '@ember/object'
 
-AccounState = Ember.Object.extend(
+AccounState = EmberObject.extend(
 
   modelName: 'acc-state'
   id: null

@@ -1,3 +1,5 @@
+import { isBlank } from '@ember/utils'
+
 import { attr, Model } from 'ember-cli-simple-store/model'
 import CMCore from 'npm:melis-api-js'
 
@@ -11,7 +13,7 @@ Event = Model.extend(
   time: attr()
 
   isGlobal: ( ->
-    Ember.isBlank(@get('account'))
+    isBlank(@get('account'))
   ).property('account')
 
   data: (->

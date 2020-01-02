@@ -1,3 +1,6 @@
+import { computed } from "@ember/object"
+import { isNone } from "@ember/utils"
+
 import { attr, Model } from 'ember-cli-simple-store/model'
 import CMCore from 'npm:melis-api-js'
 
@@ -19,10 +22,10 @@ AbEntry = Model.extend(
     (@get('name') || '?').charAt(0).toUpperCase()
   ).property('name')
 
-  isAddress: Ember.computed.equal('type', C.AB_TYPE_ADDRESS)
-  isCm: Ember.computed.equal('type', C.AB_TYPE_MELIS)
+  isAddress: computed.equal('type', C.AB_TYPE_ADDRESS)
+  isCm: computed.equal('type', C.AB_TYPE_MELIS)
 
-  address: Ember.computed('val',
+  address: computed('val',
     get: (key) ->
       if @get('isAddress')
         @get 'val'
@@ -31,7 +34,7 @@ AbEntry = Model.extend(
         @set 'val', value
   )
 
-  pubId: Ember.computed('val',
+  pubId: computed('val',
     get: (key) ->
       @get 'val' if @get('isCm')
     set: (key, value) ->
@@ -39,27 +42,27 @@ AbEntry = Model.extend(
 
   )
 
-  name: Ember.computed('meta',
+  name: computed('meta',
     get: (key) ->
       @get('meta.name')
 
     set: (key, value) ->
-      @set('meta', {}) if Ember.isNone(@get('meta'))
+      @set('meta', {}) if isNone(@get('meta'))
       @set 'meta.name', value
       value
   )
 
-  alias: Ember.computed('meta',
+  alias: computed('meta',
     get: (key) ->
       @get('meta.alias')
 
     set: (key, value) ->
-      @set('meta', {}) if Ember.isNone(@get('meta'))
+      @set('meta', {}) if isNone(@get('meta'))
       @set 'meta.alias', value
       value
   )
 
-  serialized: ( -> @getProperties('id', 'type', 'label', 'meta', 'val', 'coin')).property().volatile()
+  serialized: ( -> @getProperties('id', 'type', 'labels', 'meta', 'val', 'coin')).property().volatile()
 
 
 )

@@ -1,39 +1,44 @@
-`import { test, moduleFor, module } from 'qunit'`
-`import Ember from 'ember'`
-`import startApp from '../../helpers/start-app'`
-`import { lookupService } from '../../helpers/utils/lookup'`
+import { test, moduleFor, module } from 'qunit'
+import { run } from '@ember/runloop'
+import startApp from '../../helpers/start-app'
+import { setupTest } from 'ember-qunit'
 
-`import setup from '../../helpers/utils/set-up'`
+import setup from '../../helpers/utils/set-up'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
-`import CmSession from 'melis-cm-svcs/services/cm-session'`
+import CmSession from 'melis-cm-svcs/services/cm-session'
 
 application = null
 session = null
 
 service =  null
 
-module('Integration: services/cm.ptxs',
-  beforeEach: (assert)->
+module('Integration: services/cm.ptxs', (hooks) ->
+  setupTest(hooks)
+
+  hooks.beforeEach((assert)->
     application = startApp()
-    session = lookupService(application, 'cm-session')
+    session = @owner.lookup('service:cm-session')
 
 
     done = assert.async()
 
-    setup.setupEnroll(session, '1234', 'test').then ->
-      service = lookupService(application, 'cm-ptxs')
-      done()
+    setup.setupEnroll(session, '1234', 'test').then =>
+      service = @owner.lookup('service:cm-ptxs')
+      waitTime(5000).then( -> done())
+  )
 
-
-  afterEach: ->
+  hooks.afterEach(->
     session.disconnect() if session.get('connected')
-    Ember.run(application, 'destroy');
+    run(application, 'destroy')
+  )
+
+
+
+  test 'ready for tests', (assert) ->
+    assert.equal session.get('ready'), true
+
+
+  test 'instantiate service', (assert) ->
+    assert.ok service.get('cm')
 )
-
-
-test 'ready for tests', (assert) ->
-  assert.equal session.get('ready'), true
-
-
-test 'instantiate service', (assert) ->
-  assert.ok service.get('cm')

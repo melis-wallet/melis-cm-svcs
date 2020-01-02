@@ -1,16 +1,20 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from '@ember/object/evented'
+
 import CMCore from 'npm:melis-api-js'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+
+import Logger from 'melis-cm-svcs/utils/logger'
 
 DELAY = 2000
 SVCID = 'account-events'
 
 C = CMCore.C
 
-CmAccountEventsService = Ember.Service.extend(Ember.Evented,
-  cm:  Ember.inject.service('cm-session')
-  stream: Ember.inject.service('cm-stream')
-  store: Ember.inject.service('simple-store')
+CmAccountEventsService = Service.extend(Evented,
+  cm:  service('cm-session')
+  stream: service('cm-stream')
+  store: service('simple-store')
 
   inited: false
 
@@ -61,7 +65,7 @@ CmAccountEventsService = Ember.Service.extend(Ember.Evented,
       # TODO, remember when
       fromDate ||= moment().subtract(35, 'days').unix() * 1000
 
-      Ember.Logger.debug('= Getting account events for account', account.get('cmo.meta.name'))
+      Logger.debug('= Getting account events for account', account.get('cmo.meta.name'))
 
       api = @get('cm.api')
       store = @get('store')
@@ -87,6 +91,8 @@ CmAccountEventsService = Ember.Service.extend(Ember.Evented,
     )
 
 
+
+
   doneInit: ->
     @set('inited', true)
     @trigger('init-finished')
@@ -101,7 +107,7 @@ CmAccountEventsService = Ember.Service.extend(Ember.Evented,
     ).then( ->  self.doneInit() unless self.get('isDestroyed') )
 
   setup: (->
-    Ember.Logger.info  "== Starting account-events service"
+    Logger.info  "== Starting account-events service"
     api = @get('cm.api')
 
     @prefetchEvents()
@@ -110,18 +116,18 @@ CmAccountEventsService = Ember.Service.extend(Ember.Evented,
 
   refreshEvents: ->
     if @get('cm.connected') && @get('inited')
-      Ember.Logger.debug('- Refreshing events')
+      Logger.debug('- Refreshing events')
       waitIdleTime(DELAY).then( => @fetchAllAccEvents(@get('cm.lastRefresh')))
 
   setupListeners: ->
     api = @get('cm.api')
-    @_eventLJoined = (data) => @dispatchEventJoined(data)
-    api.on(C.EVENT_JOINED, @_eventLJoined)
+    @_eventJoined = (data) => @dispatchEventJoined(data)
+    api.on(C.EVENT_JOINED, @_eventJoined)
 
     @get('cm').on('net-restored', this, @refreshEvents)
 
   teardownListener: ( ->
-    @get('cm.api').removeListener(C.EVENT_JOINED, @_eventLJoined) if @_eventLJoined
+    @get('cm.api').removeListener(C.EVENT_JOINED, @_eventJoined) if @_eventJoined
     @get('cm').off('net-restored', this, @refreshEvents)
   ).on('willDestroy')
 

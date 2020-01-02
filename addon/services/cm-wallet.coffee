@@ -1,7 +1,13 @@
-import Ember from 'ember'
+#import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from "@ember/object/evented"
+import { get, set } from "@ember/object"
+import { isBlank } from "@ember/utils"
+import RSVP from 'rsvp'
 import CMCore from 'npm:melis-api-js'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 import StreamSupport from 'melis-cm-svcs/mixins/stream-support'
+import Logger from 'melis-cm-svcs/utils/logger'
 
 DELAY = 2000
 REFRESH_DELAY = 8000
@@ -9,12 +15,28 @@ SVCID = 'wallet'
 
 C = CMCore.C
 
-CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
-  cm:  Ember.inject.service('cm-session')
-  streamsvc: Ember.inject.service('cm-stream')
-  store: Ember.inject.service('simple-store')
+CmWalletService = Service.extend(Evented, StreamSupport,
+  cm: service('cm-session')
+  streamsvc: service('cm-stream')
+  store: service('simple-store')
 
   inited: false
+
+  labels: []
+
+  getLabels: (force) ->
+
+    api = @get('cm.api')
+
+    if force || isBlank(@get('labels'))
+      api.getAllLabels().then((res) =>
+        @set('labels', l) if (l = get(res, 'labels'))
+      ).catch((err) ->
+        Logger.error("[Wallet], failed getting labels", err)
+        throw err
+      )
+    else
+      RSVP.resolve(@get('labels'))
 
 
   cancelPendingTfad: ->
@@ -24,7 +46,7 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
     )
 
   eventDeviceDeleted: (data) ->
-    if Ember.get(data, 'lastUsedInLogin')
+    if get(data, 'lastUsedInLogin')
       id = "#{C.EVENT_DEVICE_DELETED}-#{data.ts}"
       @newEvt(id: id, type: C.EVENT_DEVICE_DELETED, cmo: data, time: data.ts)
 
@@ -43,6 +65,13 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
   eventDevicePrimary: (data) ->
     id = "#{C.EVENT_NEW_PRIMARY_DEVICE}-#{data.id}"
     @newEvt(id: id, type: C.EVENT_NEW_PRIMARY_DEVICE, cmo: data, time: data.ts)
+
+
+  handleWall: (data) ->
+    id = "#{C.EVENT_PUBLIC_MESSAGE}-#{data.date}"
+    @newEvt(id: id, type: C.EVENT_PUBLIC_MESSAGE, cmo: data.params, time: data.date)
+
+
 
   #
   #
@@ -81,14 +110,14 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
     # TODO, remember when
     fromDate ||= moment().subtract(35, 'days').unix() * 1000
 
-    Ember.Logger.debug('= Getting wallet events')
+    Logger.debug('= Getting wallet events')
 
     api = @get('cm.api')
     store = @get('store')
 
     self =  @
     api.walletGetNotifications(fromDate).then((events) ->
-      Ember.Logger.debug "Wallet Events: ", events
+      Logger.debug "Wallet Events: ", events
       events.list.forEach((data) ->
         switch data.type
           when C.EVENT_TFA_DISABLE_PROPOSAL
@@ -120,10 +149,11 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
       waitIdleTime(DELAY)
     ).then( ->
       self.fetchAllEvents(fromDate)
+      self.getLabels()
     ).then( ->  self.doneInit() unless self.get('isDestroyed'))
 
   setup: (->
-    Ember.Logger.info  "== Starting wallet-events service"
+    Logger.info  "== Starting wallet-events service"
     api = @get('cm.api')
 
     @initStream()
@@ -134,7 +164,7 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
 
   refreshEvents: ->
     if @get('cm.connected') && @get('inited')
-      Ember.Logger.debug('- Refreshing events in', REFRESH_DELAY)
+      Logger.debug('- Refreshing events in', REFRESH_DELAY)
       waitIdleTime(REFRESH_DELAY).then( =>
         @fetchAllEvents(@get('cm.lastRefresh'))
         @set('cm.lastRefresh', (moment.now() * 1000))
@@ -147,7 +177,9 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
     @_eventTfaDisable = (data) => @eventTfaDisable(data)
     @_eventDeviceLogin = (data) => @eventDeviceLogin(data)
     @_eventDevicePrimary = (data) => @eventDevicePrimary(data)
+    @_eventWall = (data) => @handleWall(data)
 
+    api.on(C.EVENT_PUBLIC_MESSAGE, @_eventWall)
     api.on(C.EVENT_DEVICE_DELETED, @_eventDeviceDeleted)
     api.on(C.EVENT_TFA_DISABLE_PROPOSAL, @_eventTfaDisable)
     api.on(C.EVENT_DEVICE_LOGIN, @_eventDeviceLogin)
@@ -156,6 +188,7 @@ CmWalletService = Ember.Service.extend(Ember.Evented, StreamSupport,
     @get('cm').on('net-restored', this, @refreshEvents)
 
   teardownListener: ( ->
+    @get('cm.api').removeListener(C.EVENT_PUBLIC_MESSAGE, @_eventWall) if @_eventWall
     @get('cm.api').removeListener(C.EVENT_DEVICE_DELETED, @_eventDeviceDeleted) if @_eventDeviceDeleted
     @get('cm.api').removeListener(C.EVENT_TFA_DISABLE_PROPOSAL, @_eventTfaDisable) if @_eventTfaDisable
     @get('cm.api').removeListener(C.EVENT_DEVICE_LOGIN, @_eventDeviceLogin) if @_eventDeviceLogin

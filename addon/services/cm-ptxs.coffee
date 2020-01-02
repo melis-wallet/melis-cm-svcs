@@ -1,18 +1,25 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from "@ember/object/evented"
+import { get, set, getProperties } from "@ember/object"
+import { isBlank, isNone, isEmpty } from "@ember/utils"
+import RSVP from 'rsvp'
+
 import CMCore from 'npm:melis-api-js'
 import Ptx from 'melis-cm-svcs/models/ptx'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 import { mergeProperty } from 'melis-cm-svcs/utils/misc'
 
+import Logger from 'melis-cm-svcs/utils/logger'
+
 C = CMCore.C
 SVCID = 'ptxs'
 DELAY = 500
 
-CmPreparedTxService = Ember.Service.extend(Ember.Evented,
+CmPreparedTxService = Service.extend(Evented,
 
-  cm: Ember.inject.service('cm-session')
-  stream: Ember.inject.service('cm-stream')
-  store: Ember.inject.service('simple-store')
+  cm: service('cm-session')
+  stream: service('cm-stream')
+  store: service('simple-store')
 
   inited: false
 
@@ -22,7 +29,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   fetchAllPtx: (fromDate) ->
     if (accounts = @get('cm.accounts'))
 
-      Ember.RSVP.all(accounts.map((account) =>
+      RSVP.all(accounts.map((account) =>
         @fetchPtxs(account, fromDate)
       )).then( =>
         @trigger('load-all-finished', fromDate)
@@ -35,7 +42,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   fetchPtxs: (account, fromDate) ->
     if account
 
-      Ember.Logger.debug('= Getting PTX for account', account.get('cmo.meta.name'))
+      Logger.debug('= Getting PTX for account', account.get('cmo.meta.name'))
 
       api = @get('cm.api')
       store = @get('store')
@@ -46,7 +53,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
         account.set('ptxs.list', @findByAccount(account))
         @trigger('load-finished', account, fromDate)
       ).catch((err) ->
-        Ember.Logger.error('[PTX] Error fetching PTXs for account: ', err)
+        Logger.error('[PTX] Error fetching PTXs for account: ', err)
       )
 
   #
@@ -54,10 +61,10 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   #
   getPtxByHash: (hash, account) ->
     @get('cm.api').ptxGetByHash(hash).then((res) =>
-      if ptx = Ember.get(res, 'ptx')
+      if ptx = get(res, 'ptx')
         @pushPtx(id: ptx.id, account: account, cmo: ptx)
     ).catch((err) ->
-      Ember.Logger.error('[PTX] Error PTX by hash ', err)
+      Logger.error('[PTX] Error PTX by hash ', err)
       throw err
     )
 
@@ -68,7 +75,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   ptxFromState: (state, account) ->
     if state
       account ||= @get('cm.currentAccount')
-      if ptxData = Ember.get(state, 'ptx')
+      if ptxData = get(state, 'ptx')
         res = @addPtx(id: ptxData.id, account: account, cmo: ptxData, currentState: state)
     return res
 
@@ -78,10 +85,10 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   findById: (id , account) ->
     store = @get('store')
     if ptx = store.find('ptx', id).get('content')
-      Ember.RSVP.resolve(ptx)
+      RSVP.resolve(ptx)
     else
       @get('cm.api').ptxGetById(id).then((res) =>
-        if ptx = Ember.get(res, 'ptx')
+        if ptx = get(res, 'ptx')
           @addPtx(id: ptx.id, account: account, cmo: ptx)
       )
 
@@ -91,13 +98,13 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   findByAccount: (account) ->
     if account
       store = @get('store')
-      store.find('ptx', {'account.pubId': Ember.get(account, 'pubId')})
+      store.find('ptx', {'account.pubId': get(account, 'pubId')})
 
   #
   # a new account has been created
   #
   newAccount: ( ->
-    @get('cm.accounts').forEach((account) => fetchPtxs(account) if Ember.isNone(account.get('ptxs')))
+    @get('cm.accounts').forEach((account) => fetchPtxs(account) if isNone(account.get('ptxs')))
   ).observes('cm.accounts')
 
   #
@@ -110,18 +117,18 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   # fetch the discussion for a ptx now
   #
   fetchDiscussion: (ptx, force) ->
-    Ember.RSVP.reject('no cmo') unless (tx = Ember.get(ptx, 'cmo'))
+    RSVP.reject('no cmo') unless (tx = get(ptx, 'cmo'))
 
-    if Ember.isEmpty(ptx.get('discussion')) || force
+    if isEmpty(ptx.get('discussion')) || force
       @get('cm.api').msgGetAllToPtx(tx).then((res) =>
         ptx.set('discussion', res.list)
         return res.list
       ).catch((err) ->
-        Ember.Logger.error '[PTX] Error fetching discussion for ptx: ', tx
+        Logger.error '[PTX] Error fetching discussion for ptx: ', tx
         throw err
       )
     else
-      Ember.RSVP.resolve(ptx.get('discussion'))
+      RSVP.resolve(ptx.get('discussion'))
 
   #
   #
@@ -140,11 +147,11 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
       @get('cm.api').ptxCancel(ptx.get('cmo')).then( =>
         @trigger('cancelled-ptx', ptx)
       ).catch((err)->
-        Ember.Logger.error('[PTX] Cancel ptx failed: ', err)
+        Logger.error('[PTX] Cancel ptx failed: ', err)
         throw err
       )
     else
-      Ember.RSVP.reject('not owner')
+      RSVP.reject('not owner')
 
 
   #
@@ -159,11 +166,11 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
         @trigger('proposed-ptx', ptx, res)
         return res
       ).catch((err) ->
-        Ember.Logger.error('[PTX] Propose ptx failed: ', err)
+        Logger.error('[PTX] Propose ptx failed: ', err)
         throw err
       )
     else
-      Ember.RSVP.reject('improper state')
+      RSVP.reject('improper state')
 
 
   #
@@ -177,18 +184,18 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
         @trigger('signed-ptx', ptx, data)
         return data
       ).catch((err) ->
-        Ember.Logger.error('[PTX] Sign ptx failed: ', err)
+        Logger.error('[PTX] Sign ptx failed: ', err)
         throw err
       )
     else
-      Ember.RSVP.reject('no state')
+      RSVP.reject('no state')
 
 
   #
   #
   #
   getUnspents: (account) ->
-    if cmo = Ember.get(account, 'cmo')
+    if cmo = get(account, 'cmo')
       @get('cm.api').getUnspents(cmo).then((res) =>
         account.set('unspents', res.list)
       )
@@ -198,7 +205,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
 
   newMeta: (info) ->
     store = @get('store')
-    if (ptx = store.find('ptx', info.id)) && (!Ember.isBlank(ptx.get('cmo')))
+    if (ptx = store.find('ptx', info.id)) && (!isBlank(ptx.get('cmo')))
       mergeProperty(ptx, 'cmo.meta', info.meta)
       @pushToStream(ptx, 'upd')
     return ptx
@@ -209,7 +216,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
       ptx.set('cmo.signatures', info.signatures)
       @pushToStream(ptx, 'upd')
     else
-      Ember.Logger.error '[PTX] ptx-update for a ptx we do not know', info
+      Logger.error '[PTX] ptx-update for a ptx we do not know', info
 
   newMessage: (msg, account) ->
     store = @get('store')
@@ -218,12 +225,12 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
         ptx.get('discussion').unshiftObject(msg)
         @trigger 'msg-to-ptx', msg, ptx
 
-        { type, date } = Ember.getProperties(msg, 'type', 'date')
+        { type, date } = getProperties(msg, 'type', 'date')
 
         # kind of kludgy
         if type == C.CHAT_MSG_TYPE_SIG
-          signer = Ember.get(msg, 'payload.signerPubId ')
-          enough = Ember.get(msg, 'payload.enoughSigners ')
+          signer = get(msg, 'payload.signerPubId ')
+          enough = get(msg, 'payload.enoughSigners ')
           @trigger('new-sig', signer, enough, ptx, date)
 
         @pushMsgToStream(msg, ptx, date)
@@ -233,12 +240,12 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   pushMsgToStream: (msg, ptx, date) ->
     account = ptx.get('account')
 
-    if Ember.get(msg, 'fromPubId') == Ember.get(account, 'uniqueId')
-      Ember.Logger.debug '-- ptx own message', Ember.get(account, 'uniqueId')
+    if get(msg, 'fromPubId') == get(account, 'uniqueId')
+      Logger.debug '-- ptx own message', get(account, 'uniqueId')
     else
-      Ember.Logger.debug '-- ptx pushing new message', Ember.get(msg, 'fromPubId'), Ember.get(account, 'uniqueId')
+      Logger.debug '-- ptx pushing new message', get(msg, 'fromPubId'), get(account, 'uniqueId')
       id = 'txm-' + ptx.get('id')
-      Ember.set(msg, 'display', true)
+      set(msg, 'display', true)
       @get('stream').push(id: id, subclass: 'txm', account: account, content: msg, ptx: ptx, created: date, updated: date, notifiable: true)
 
 
@@ -279,7 +286,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
       @pushToStream(ptx, 'upd')
       @trigger('update-ptx', ptx)
     else
-      Ember.Logger.error '[PTX] ptx-update for a ptx we do not know', info
+      Logger.error '[PTX] ptx-update for a ptx we do not know', info
 
   #
   #
@@ -306,7 +313,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   #
   #
   dispatchNewPtx:  (data) ->
-    Ember.Logger.debug "*New PTX: ", data
+    Logger.debug "*New PTX: ", data
     accounts = @get('cm.accounts')
     accounts.some( (acc) =>
       if acc.get('cmo.pubId') == data.masterPubId || acc.get('cmo.masterPubId') == data.masterPubId
@@ -317,11 +324,11 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
   #
   #
   dispatchUpdatePtx: (data) ->
-    Ember.Logger.debug "*Updated PTX: ", data
+    Logger.debug "*Updated PTX: ", data
     accounts = @get('cm.accounts')
     accounts.some( (acc) =>
       if acc.get('cmo.pubId') == data.masterPubId || acc.get('cmo.masterPubId') == data.masterPubId
-        Ember.Logger.debug "--- found master", acc
+        Logger.debug "--- found master", acc
         if data.ptx # a real update
           @updatePtx(id: data.ptxId, account: acc, cmo: data.ptx)
         if data.msg # a chat message or a signature event
@@ -340,12 +347,12 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
 
   refreshPtxs: ->
     if @get('cm.connected') && @get('inited')
-      Ember.Logger.debug('- Refreshing ptxs')
+      Logger.debug('- Refreshing ptxs')
       waitIdleTime(DELAY).then( => @fetchAllPtx(@get('cm.lastRefresh')))
 
   setup: ( ->
 
-    Ember.Logger.debug  "== Starting ptx service"
+    Logger.debug  "== Starting ptx service"
     api = @get('cm.api')
 
     @setupListeners()
@@ -356,7 +363,7 @@ CmPreparedTxService = Ember.Service.extend(Ember.Evented,
     ).then( ->
       self.doneInit() unless self.get('isDestroyed')
     ).catch((err) ->
-      Ember.Logger.error('[PTX] Error fetching PTXs: ', err)
+      Logger.error('[PTX] Error fetching PTXs: ', err)
     )
   ).on('init')
 

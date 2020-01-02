@@ -1,8 +1,7 @@
-`import { test, moduleFor } from 'ember-qunit'`
-`import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'`
-`import Ember from 'ember'`
+import { test, moduleFor } from 'ember-qunit'
+import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
-`import CmSession from 'melis-cm-svcs/services/cm-session'`
+import CmSession from 'melis-cm-svcs/services/cm-session'
 
 DISCOVERY_URL = 'https://discover-regtest.melis.io/api/v1/endpoint/stomp'
 FAIL_DISCOVERY_URL = 'https://discover-regtest.melis.io/api/v1/endpoint/fail'

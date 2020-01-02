@@ -1,7 +1,13 @@
+import { inject as service } from '@ember/service'
+import { computed } from '@ember/object'
+import { alias } from '@ember/object/computed'
+import { A }  from '@ember/array'
+import { get, set, getProperties } from '@ember/object'
+
 import { attr, Model } from 'ember-cli-simple-store/model'
 
 Ptx = Model.extend(
-  cm:  Ember.inject.service('cm-session')
+  cm:  service('cm-session')
 
   account: attr()
   cmo: attr()
@@ -15,7 +21,7 @@ Ptx = Model.extend(
 
 
   setup: ( ->
-    @set 'discussion', Ember.A()
+    @set 'discussion', A()
   ).on('init')
 
   state: (->
@@ -31,7 +37,7 @@ Ptx = Model.extend(
     else false
   ).property('account.cmo', 'cmo.signatures')
 
-  isSignable: Ember.computed.and('isActive', 'hasFieldsSignature')
+  isSignable: computed.and('isActive', 'hasFieldsSignature')
 
   isLocal: ( ->
     if hash = @get('cmo.meta.creatorDeviceHash')
@@ -46,21 +52,22 @@ Ptx = Model.extend(
     @get('account.cmo.pubId') == @get('cmo.accountPubId')
   ).property('account', 'cmo.accountPubId')
 
-  isActive: Ember.computed.equal('cmo.status', 'ACTIVE')
-  isBroadcasted: Ember.computed.equal('cmo.status', 'BROADCASTED')
-  isCanceled: Ember.computed.equal('cmo.status', 'CANCELED')
-  isRespent: Ember.computed.equal('cmo.status', 'RESPENT')
+  isActive: computed.equal('cmo.status', 'ACTIVE')
+  isBroadcasted: computed.equal('cmo.status', 'BROADCASTED')
+  isCanceled: computed.equal('cmo.status', 'CANCELED')
+  isRespent: computed.equal('cmo.status', 'RESPENT')
 
   # maybe this is wrong because includes non ACTIVE ones
   isWaiting: Ember.computed.or('isSignable', 'accountIsOwner')
 
-  isMultisig: Ember.computed.alias('account.isMultisig')
-  cosignRequired: Ember.computed.alias('account.cosignRequired')
-  isInvalid: Ember.computed.not('hasFieldsSignature')
-  isVerified: Ember.computed.alias('state.summary.validated')
+  isMultisig: alias('account.isMultisig')
+  cosignRequired: alias('account.cosignRequired')
+  isInvalid: computed.not('hasFieldsSignature')
+  isVerified: alias('state.summary.validated')
 
   hasFieldsSignature: ( ->
-    !!@get('cm.api').ptxHasFieldsSignature(@get('cmo'))
+    if @get('cmo')
+      !!@get('cm.api').ptxHasFieldsSignature(@get('cmo'))
   ).property('cmo.meta.ownerSig')
 
   ownerName: ( ->
@@ -71,7 +78,7 @@ Ptx = Model.extend(
   isRotation: ( ->
     return false if (@get('cmo.recipients.length') != 1)
     (r = @get('cmo.recipients.firstObject')) &&
-    (pubId = Ember.get(r, 'pubId')) &&
+    (pubId = get(r, 'pubId')) &&
     (pubId == @get('cmo.masterPubId'))
   ).property('cmo.recipients.firstObject', 'cmo.masterPubId')
 
@@ -81,7 +88,7 @@ Ptx = Model.extend(
   ).property('isSignable', 'isRespent')
 
   #
-  urgent: Ember.computed.alias('accountCanSign')
+  urgent: alias('accountCanSign')
 )
 
 export default Ptx

@@ -1,6 +1,12 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
-`import { storageFor } from 'ember-local-storage'`
+import Service, { inject as service } from '@ember/service'
+import { alias, bool } from "@ember/object/computed"
+import { get, set, getProperties } from "@ember/object"
+import { isBlank, isNone, isEmpty } from "@ember/utils"
+
+import CMCore from 'npm:melis-api-js'
+import { storageFor } from 'ember-local-storage'
+
+import Logger from 'melis-cm-svcs/utils/logger'
 
 import formatMoney from "accounting/format-money"
 
@@ -11,30 +17,49 @@ DEFAULT_COIN = 'BTC'
 
 C = CMCore.C
 
-CurrencyService = Ember.Service.extend(
+CurrencyService = Service.extend(
 
-  cm: Ember.inject.service('cm-session')
-  coinsvc: Ember.inject.service('cm-coin')
+  cm: service('cm-session')
+  coinsvc: service('cm-coin')
 
   #
   walletstate: storageFor('wallet-state')
 
   #
-  currency: Ember.computed.alias('cm.globalCurrency')
+  #
+  #
+  activeCurrency: null
+
+  #
+  #
+  globalCurrency: alias('cm.globalCurrency')
+
+
+  #
+  #
+  usdValues: {}
+
+  #
+  #
+  #
+  currency: ( ->
+    @get('activeCurrency') || @get('globalCurrency')
+  ).property('activeCurrency', 'globalCurrency')
+
 
   #
   #
   #
   exchangesFor: (coin) ->
     if (c = @get('coinsvc.coins').findBy('unit', coin))
-      Ember.get(c, 'knownExchanges')
+      get(c, 'knownExchanges')
 
   #
   #
   #
   valueFor: (coin) ->
     if (c = @get('coinsvc.coins').findBy('unit', coin))
-      Ember.get(c, 'value')
+      get(c, 'value')
 
 
   #
@@ -59,6 +84,24 @@ CurrencyService = Ember.Service.extend(
     if (c = @get('coinsvc.coins')?.findBy('unit', coin)) && (value = c.get('value'))
       Math.ceil((currency/value) * SATOSHI)
 
+
+  #
+  # convert to an approximate value in currency from a value in usd, by going
+  # through the relative values in a coin (the ticker doesn't provide usd -> currency)
+  #
+  currUsdRatio: (coin) ->
+    if (c = @get('coinsvc.coins')?.findBy('unit', coin)) && (usdRef = @usdValues[c.get('tsym')])
+      satoshis = Math.ceil(SATOSHI/usdRef)
+      @convertTo(coin, satoshis)
+
+
+  #
+  #
+  #
+  valueTroughUsd: (coin, satoshis, usdValue) ->
+    if (ratio = @currUsdRatio(coin))
+      (satoshis/SATOSHI) * usdValue * ratio
+
   #
   #
   #
@@ -69,25 +112,30 @@ CurrencyService = Ember.Service.extend(
   #
   #
   #
-  subscribedOk: Ember.computed.bool('subscription')
+  subscribedOk: bool('subscription')
 
 
   #
   tickerData: (data) ->
     @get('coinsvc.coins')?.forEach((c) ->
-      if ticker = Ember.get(data, Ember.get(c, 'tsym'))
-        Ember.set(c, 'ticker', ticker)
+      if ticker = get(data, get(c, 'tsym'))
+        set(c, 'ticker', ticker)
+      else
+        # do something clever, like determining a value from usd?
+        set(c, 'ticker', null)
     )
+    if usdValues = get(data, 'usdValues')
+      @set('usdValues', usdValues)
 
   #
   historyData: (data) ->
     @get('coinsvc.coins')?.forEach((c) ->
-      if data.values && (history = Ember.get(data.values, Ember.get(c, 'tsym')))
+      if data.values && (history = get(data.values, get(c, 'tsym')))
         switch data.type
           when C.HISTORY_SLIDING_24H
-            Ember.set(c, 'history_d', history)
+            set(c, 'history_d', history)
           when C.HISTORY_SLIDING_30D
-            Ember.set(c, 'history_m', history)
+            set(c, 'history_m', history)
     )
 
 
@@ -97,19 +145,19 @@ CurrencyService = Ember.Service.extend(
     @setProperties('lastUpdate', null)
     if currency
       @set 'tickerSub', api.subscribeToTickers(currency, (data) =>
-        if !Ember.isBlank(data)
-          Ember.Logger.debug('[ticker] data: ', data)
+        if !isBlank(data)
+          Logger.debug('[ticker] data: ', data)
           @tickerData(data)
       )
       @set 'historyDSub', api.subscribeToTickersHistory(C.HISTORY_SLIDING_DAILY, currency, (data) =>
-        if !Ember.isBlank(data)
-          Ember.Logger.debug('[history] data: ', data)
+        if !isBlank(data)
+          Logger.debug('[history] data: ', data)
           @historyData(data)
 
       )
       @set 'historyDSub', api.subscribeToTickersHistory(C.HISTORY_SLIDING_MONTHLY, currency, (data) =>
-        if !Ember.isBlank(data)
-          Ember.Logger.debug('[history] data: ', data)
+        if !isBlank(data)
+          Logger.debug('[history] data: ', data)
           @historyData(data)
 
       )
@@ -128,12 +176,13 @@ CurrencyService = Ember.Service.extend(
 
   #
   subscribeNewCurrency: ( ->
-    @set('currentExchange', FALLBACK_EX) if Ember.isBlank(@get('currentExchange'))
-    return unless @get('cm.ready')
+    @set('currentExchange', FALLBACK_EX) if isBlank(@get('currentExchange'))
+    @set('usdValues', {})
+    return unless @get('cm.connected')
 
     @unsubscribeQueues()
     @subscribeQueues(@get('currency'))
-  ).observes('currency', 'cm.ready').on('init')
+  ).observes('currency', 'cm.connected').on('init')
 
 
   currencyChanged: ( ->

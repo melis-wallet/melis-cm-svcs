@@ -1,4 +1,5 @@
-import Ember from 'ember'
+import { alias } from '@ember/object/computed'
+
 import { attr, Model } from 'ember-cli-simple-store/model'
 
 StreamEntry = Model.extend(
@@ -14,8 +15,8 @@ StreamEntry = Model.extend(
 
   account: null
 
-  display: Ember.computed.alias('content.display')
-  urgent: Ember.computed.alias('content.urgent')
+  display: alias('content.display')
+  urgent: alias('content.urgent')
 )
 
 

@@ -1,12 +1,18 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from '@ember/object/evented'
+import { get, set, getProperties } from "@ember/object"
+import { isBlank } from "@ember/utils"
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+
 import ScheduledEvent from '../mixins/scheduled-event'
+
+import Logger from 'melis-cm-svcs/utils/logger'
 
 DELAY = 2000
 STORAGE_ACCOUNT_PTR = /^storage\:recovery-info\:cm-account\:(.+)$/
 
-CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
-  cm:  Ember.inject.service('cm-session')
+CmRecoveryInfo =Service.extend(ScheduledEvent, Evented,
+  cm:  service('cm-session')
 
   useTimestamps: true
 
@@ -14,46 +20,49 @@ CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
   #
   #
   getRecoveryInfo: (account, fromDate) ->
-    Ember.Logger.debug "[Rinfo] Getting recovery for: ", account.get('uniqueId')
+    Logger.debug "[Rinfo] Getting recovery for: ", account.get('uniqueId')
     api = @get('cm.api')
     api.getRecoveryInfo(account.get('cmo'), fromDate).then((res) =>
-      if Ember.get(res, 'recoveryData')
+      if get(res, 'recoveryData')
         account.set('recoveryInfo.current', res)
         @getExpiringUnspents(account)
     ).catch((error) ->
-      Ember.Logger.error('Failed fetching recovery info for account: ', {account, error})
+      Logger.error('Failed fetching recovery info for account: ', {account, error})
     )
 
 
   getExpiringUnspents: (account) ->
-    Ember.Logger.debug "[Rinfo] Getting expiring unspents for: ", account.get('uniqueId')
+    Logger.debug "[Rinfo] Getting expiring unspents for: ", account.get('uniqueId')
     api = @get('cm.api')
     api.getExpiringUnspents(account.get('cmo')).then((res) =>
-      if res && (list = Ember.get(res, 'list'))
-        account.set('recoveryInfo.expiring', @reviewExpiring(list))
+      Logger.debug("Expiring unspents: ", res)
+      if res && (list = get(res, 'list'))
+        account.set('recoveryInfo.expiring', @reviewExpiring(list, account.get('coin')))
     ).catch((error) ->
-      Ember.Logger.error('Failed fetching recovery info for account: ', {account, error})
+      Logger.error('Failed fetching recovery info for account: ', {account, error})
     )
 
-  reviewExpiring: (list) ->
-    console.error "REVIEW", list
+  reviewExpiring: (list, coin) ->
     try
       cm = @get('cm')
-      list.forEach((e) -> Ember.set(e, 'timeExpire', cm.estimateBlockTime(e.blockExpire, e.coin)) if e.blockExpire)
+      list.forEach((e) -> set(e, 'timeExpire', cm.estimateBlockTime(e.blockExpire, coin)) if e.blockExpire)
       list
     catch error
-      Ember.Logger.error('Failed processing unspents: ', error)
+      Logger.error('Failed processing unspents: ', error)
 
   #
   #
   #
   onScheduledEvent: ->
-    Ember.Logger.debug('[Rinfo] scheduler.')
+    return if @isDestroyed
+
+    Logger.debug('[Rinfo] scheduler.')
+
     accounts = @get('cm.accounts')
-    accounts.forEach( (acc) =>
-      if acc.get('needsRecovery') && (acc.get('recentTxs') || Ember.isBlank(acc.get('recoveryInfo.current')) || @get('useTimestamps'))
+    accounts?.forEach( (acc) =>
+      if acc.get('needsRecovery') && (acc.get('recentTxs') || isBlank(acc.get('recoveryInfo.current')) || @get('useTimestamps'))
         current = acc.get('recoveryInfo.current')
-        ts = (if current then Ember.get(current, 'ts') else null)
+        ts = (if current then get(current, 'ts') else null)
         acc.set('recentTxs', false)
         @set('useTimestamps', false)
         waitIdle().then( => @getRecoveryInfo(acc, ts))
@@ -74,14 +83,14 @@ CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
         if key && res = key.match(STORAGE_ACCOUNT_PTR)
           accountId = res[1]
           unless accounts.findBy('uniqueId', accountId)
-            Ember.Logger.warn('[Recovey Info] deleting stored data for stale account: ', accountId)
+            Logger.warn('[Recovey Info] deleting stored data for stale account: ', accountId)
             localStorage.removeItem(key)
     catch err
-      Ember.Logger.error '[Recovery Info] Stale account wiper: ', err
+      Logger.error '[Recovery Info] Stale account wiper: ', err
   #
 
   setup: (->
-    Ember.Logger.info "[Recovery Info] Started."
+    Logger.info "[Recovery Info] Started."
     @startScheduling()
 
     self = @
@@ -90,7 +99,7 @@ CmRecoveryInfo = Ember.Service.extend(ScheduledEvent, Ember.Evented,
     ).then( ->
       self.trigger('init-finished')
     ).catch((err) ->
-      Ember.Logger.error('[Accunt Info] Error during init: '. err)
+      Logger.error('[Accunt Info] Error during init: '. err)
       throw err
     )
   ).on('init')

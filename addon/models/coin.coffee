@@ -1,15 +1,24 @@
-import Ember from 'ember'
+import EmberObject, { computed } from '@ember/object'
+import { alias } from '@ember/object/computed'
+import { get, set, getProperties } from "@ember/object"
+import { isBlank, isEmpty } from '@ember/utils'
+
+import CMCore from 'npm:melis-api-js'
+
+C = CMCore.C
+
 
 SATOSHI = 100000000.0
 I18N_PREFIX = 'coins.unit.'
 FALLBACK_EX = 'fallback'
 
-Coin = Ember.Object.extend(
+Coin = EmberObject.extend(
 
 
   unit: null
   label: null
   symbol: '--'
+  scheme: null
 
   subunits: []
   subunit: null
@@ -32,10 +41,12 @@ Coin = Ember.Object.extend(
   ).property('unit')
 
 
-  value: ( ->
+  value: alias('currencyValue.last')
+
+  currencyValue: ( ->
     if (ticker = @get('ticker'))
-      ex = Ember.get(ticker, @get('exchange')) || Ember.get(ticker, FALLBACK_EX) || ticker[Object.keys(ticker)[0]]
-      Ember.get(ex, 'l') if ex
+      ex = get(ticker, @get('exchange')) || get(ticker, FALLBACK_EX) || ticker[Object.keys(ticker)[0]]
+      {last: get(ex, 'l'), time: get(ex, 'ts')} if ex
   ).property('ticker', 'exchange')
 
 
@@ -60,7 +71,7 @@ Coin = Ember.Object.extend(
   currentExplorer: ( ->
     { explorers, explorer } = @getProperties('explorers', 'explorer')
 
-    return if (Ember.isEmpty('explorers') || Ember.isBlank(explorer))
+    return if (isEmpty('explorers') || isBlank(explorer))
 
     explorers.findBy('id', explorer)
   ).property('explorers', 'explorer')
@@ -79,6 +90,7 @@ Coin = Ember.Object.extend(
   convertFromCurrency: (currency) ->
     if value = @get('value')
       Math.ceil((currency/value) * SATOSHI)
+
 
 
   #
@@ -100,16 +112,16 @@ Coin = Ember.Object.extend(
   #
   urlToExplorer: (hash) ->
     if hash && (ex = @get('currentExplorer'))
-      if (url =  Ember.get(ex, 'url'))
+      if (url =  get(ex, 'url'))
         url.replace('\%h', hash.toLowerCase()).replace('\%H', hash.toUpperCase())
 
   #
   #
   #
   selectDefaultExplorer: ->
-    unless (@get('explorer') || Ember.isEmpty(exs = @get('explorers')))
+    unless (@get('explorer') || isEmpty(exs = @get('explorers')))
       ex = exs[Math.floor(Math.random() * exs.length)]
-      @set('explorer', Ember.get(ex, 'id')) if ex
+      @set('explorer', get(ex, 'id')) if ex
 
 
 

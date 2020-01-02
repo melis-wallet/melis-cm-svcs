@@ -1,4 +1,8 @@
-import Ember from 'ember'
+import EmberObject, { computed } from '@ember/object'
+import { alias } from "@ember/object/computed"
+import { get, set, getProperties } from '@ember/object'
+import { isBlank } from '@ember/utils'
+
 import PtxsSupport from 'melis-cm-svcs/mixins/ptxs-support'
 import StreamSupport from 'melis-cm-svcs/mixins/stream-support'
 import CMCore from 'npm:melis-api-js'
@@ -7,15 +11,15 @@ import { storageFor } from 'ember-local-storage'
 
 C = CMCore.C
 
-Account = Ember.Object.extend(PtxsSupport, StreamSupport,
+Account = EmberObject.extend(PtxsSupport, StreamSupport,
   cmo: null
-  num: Ember.computed.alias('cmo.num')
+  num: alias('cmo.num')
 
-  uniqueId: Ember.computed.alias('cmo.pubId')
-  pubId: Ember.computed.alias('cmo.pubId')
+  uniqueId: alias('cmo.pubId')
+  pubId: alias('cmo.pubId')
 
-  name: Ember.computed.alias('cmo.meta.name')
-  pos: Ember.computed.alias('cmo.meta.pos')
+  name: alias('cmo.meta.name')
+  pos: alias('cmo.meta.pos')
 
   #
   #
@@ -46,19 +50,22 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
   #
   #
   stateModel: (->
-    Ember.Object.create(id: @get('uniqueId'), modelName: 'account')
+    EmberObject.create(id: @get('uniqueId'), modelName: 'account')
   ).property('uniqueId')
 
   #
-  coin: Ember.computed.alias('cmo.coin')
+  coin: alias('cmo.coin')
 
   #
   unit: null
-  subunit: Ember.computed.alias('unit.subunit')
+  subunit: alias('unit.subunit')
+
+  #
+  lite: alias('cmo.meta.lite')
 
   #
   infoModel: (->
-    Ember.Object.create(id: @get('uniqueId'), modelName: 'cm-account')
+    EmberObject.create(id: @get('uniqueId'), modelName: 'cm-account')
   ).property('uniqueId')
 
   #
@@ -68,10 +75,10 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
   recoveryInfo: storageFor('recovery-info', 'infoModel')
 
   # hidden locally on the client
-  invisible: Ember.computed.alias('sstate.invisible')
+  invisible: alias('sstate.invisible')
 
   # visible only on the master device
-  secure: Ember.computed.alias('cmo.hidden')
+  secure: alias('cmo.hidden')
 
   amSummary: ( ->
     @get('balance.amAvailable') + @get('balance.amUnconfirmed')
@@ -81,6 +88,10 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
     type = @get('cmo.type')
     type == C.TYPE_MULTISIG_MANDATORY_SERVER || type == C.TYPE_MULTISIG_NO_SERVER || type == C.TYPE_COSIGNER
   ).property('cmo.type')
+
+  isLite: (->
+    !isBlank(@get('cmo.meta.lite'))
+  ).property('cmo.meta.lite')
 
   isMaster: ( ->
     @get('isMultisig') && (@get('cmo.type') != C.TYPE_COSIGNER)
@@ -99,7 +110,7 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
     @get('minSignatures') > 1
   ).property('minSignatures')
 
-  minSignatures: Ember.computed.alias('cmo.minSignatures')
+  minSignatures: alias('cmo.minSignatures')
 
   isComplete: ( ->
     !@get('isMultisig') || @get('cmo.status') == C.STATUS_ALL_COSIGNERS_OK
@@ -127,7 +138,7 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
   ).property('info.cosigners', 'isComplete')
 
 
-  hasServer: Ember.computed.alias('info.serverSignature')
+  hasServer: alias('info.serverSignature')
 
   identifier: ( ->
     try
@@ -146,7 +157,7 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
 
   isMandatory: ( ->
     if me = @get('info.cosigners')?.findBy('pubId', @get('cmo.pubId'))
-      Ember.get(me, 'mandatory')
+      get(me, 'mandatory')
     else
       false
   ).property('info.cosigners')
@@ -171,7 +182,7 @@ Account = Ember.Object.extend(PtxsSupport, StreamSupport,
 
 
   # Now, one day could be different
-  active: Ember.computed.alias('isComplete')
+  active: alias('isComplete')
 
   #
   #

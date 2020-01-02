@@ -1,8 +1,7 @@
-`import { test, moduleFor } from 'ember-qunit'`
-`import Ember from 'ember'`
-
-`import CMCore from 'npm:melis-api-js'`
-`import CMCredentials from 'melis-cm-svcs/services/cm-credentials'`
+import { test, moduleFor } from 'ember-qunit'
+import { run } from "@ember/runloop"
+import CMCore from 'npm:melis-api-js'
+import CMCredentials from 'melis-cm-svcs/services/cm-credentials'
 
 C = CMCore.C
 Buffer = CMCore.Buffer

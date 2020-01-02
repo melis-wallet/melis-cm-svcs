@@ -1,8 +1,7 @@
-`import { test, moduleFor } from 'ember-qunit'`
-`import Ember from 'ember'`
+import { test, moduleFor } from 'ember-qunit'
 
-`import CmSession from 'melis-cm-svcs/services/cm-session'`
-`import CmCredentialsService from 'melis-cm-svcs/services/cm-credentials'`
+import CmSession from 'melis-cm-svcs/services/cm-session'
+import CmCredentialsService from 'melis-cm-svcs/services/cm-credentials'
 
 DISCOVERY_URL = 'https://discover-regtest.melis.io/api/v1/endpoint/stomp'
 

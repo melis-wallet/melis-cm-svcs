@@ -1,37 +1,40 @@
-import Ember from 'ember'
+import EmberObject from '@ember/object'
+import Mixin from '@ember/object/mixin'
+import { sort, filterBy, filter } from '@ember/object/computed'
+
 import CMCore from 'npm:melis-api-js'
 
 C = CMCore.C
 
 
-StreamContext = Ember.Object.extend(
+StreamContext = EmberObject.extend(
 
   list: null
 
   sorting: ['updated:desc']
-  sorted: Ember.computed.sort('list', 'sorting')
+  sorted: sort('list', 'sorting')
 
-  displayed: Ember.computed.filterBy('sorted', 'display', true)
+  displayed: filterBy('sorted', 'display', true)
 
-  urgent:  Ember.computed.filterBy('sorted', 'urgent', true)
+  urgent:  filterBy('sorted', 'urgent', true)
 
-  newer: Ember.computed.filter('displayed', (entry, index, array) ->
+  newer: filter('displayed', (entry, index, array) ->
     entry.get('updated') > @get('highWater')
   )
 
-  current: Ember.computed.filter('displayed', (entry, index, array) ->
+  current: filter('displayed', (entry, index, array) ->
     entry.get('updated') <= @get('highWater')
   )
 
-  urgentCurrent:  Ember.computed.filterBy('current', 'urgent', true)
-  urgentNewer:  Ember.computed.filterBy('newer', 'urgent', true)
+  urgentCurrent: filterBy('current', 'urgent', true)
+  urgentNewer:  filterBy('newer', 'urgent', true)
 
   highWater: null
   lowWater: null
 
 )
 
-StreamSupport = Ember.Mixin.create(
+StreamSupport = Mixin.create(
 
   init: ->
     @_super(arguments...)

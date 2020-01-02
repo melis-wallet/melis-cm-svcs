@@ -1,6 +1,6 @@
-`import Ember from 'ember'`
-`import CMCore from 'npm:melis-api-js'`
+import Controller from '@ember/controller'
+import CMCore from 'npm:melis-api-js'
 
-ApplicationController = Ember.Controller.extend()
+ApplicationController = Controller.extend()
 
-`export default ApplicationController`
+export default ApplicationController

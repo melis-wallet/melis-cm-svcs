@@ -1,18 +1,28 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from "@ember/object/evented"
+import { get, set, getProperties } from "@ember/object"
+import { isBlank, isNone, isEmpty } from "@ember/utils"
+import { gte } from "@ember/object/computed"
+import { A } from "@ember/array"
+import RSVP from 'rsvp'
+
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+
+import Logger from 'melis-cm-svcs/utils/logger'
+
 
 DELAY = 5000
 INITED_SVCS = 4
 
-Stream= Ember.Service.extend(Ember.Evented,
+Stream= Service.extend(Evented,
 
-  cm: Ember.inject.service('cm-session')
-  store: Ember.inject.service('simple-store')
+  cm: service('cm-session')
+  store: service('simple-store')
 
-  initedSvcs: Ember.A()
+  initedSvcs: A()
 
   # TODO kind of naive I know
-  inited: Ember.computed.gte('initedSvcs.length', INITED_SVCS)
+  inited: gte('initedSvcs.length', INITED_SVCS)
 
   #
   #
@@ -25,7 +35,7 @@ Stream= Ember.Service.extend(Ember.Evented,
   #
   observeInited: ( ->
     @trigger('init-finished')
-    Ember.Logger.info('[STREAM] All subservices inited.') if @get('inited')
+    Logger.info('[STREAM] All subservices inited.') if @get('inited')
   ).observes('inited').on('init')
 
   #
@@ -34,13 +44,13 @@ Stream= Ember.Service.extend(Ember.Evented,
   findByAccount: (account) ->
     if account
       store = @get('store')
-      store.find('stream-entry', {'account.pubId': Ember.get(account, 'pubId')})
+      store.find('stream-entry', {'account.pubId': get(account, 'pubId')})
 
   #
   # a new account has been created
   #
   newAccount: ( ->
-    @get('cm.accounts').forEach((account) => @pushAccount(account) if Ember.isNone(account.get('stream.list')))
+    @get('cm.accounts').forEach((account) => @pushAccount(account) if isNone(account.get('stream.list')))
   ).observes('cm.accounts.[]')
 
   #
@@ -61,7 +71,7 @@ Stream= Ember.Service.extend(Ember.Evented,
   setHighWater: (target, time, account=null) ->
     target.set('stream.highWater', time)
     id =
-      if account && (pubId = Ember.get(account, 'pubId'))
+      if account && (pubId = get(account, 'pubId'))
         'hwm-' + account.get('pubId')
       else
         'hwm-w'
@@ -71,7 +81,7 @@ Stream= Ember.Service.extend(Ember.Evented,
   setLowWater: (target, time, account=null) ->
     target.set('stream.lowWater', time)
     id =
-      if account && (pubId = Ember.get(account, 'pubId'))
+      if account && (pubId = get(account, 'pubId'))
         'lwm-' + account.get('pubId')
       else
         'lwm-w'
@@ -82,7 +92,7 @@ Stream= Ember.Service.extend(Ember.Evented,
     store = @get('store')
     entry = store.push('stream-entry', data)
     @trigger('entry', entry)
-    if Ember.get(entry, 'notifiable')
+    if get(entry, 'notifiable')
       @trigger('notifiable-entry', entry)
 
 
@@ -90,9 +100,14 @@ Stream= Ember.Service.extend(Ember.Evented,
     @trigger('notifiable-event', event, data)
 
 
+
+
   setup: ( ->
     @pushAccounts()
   ).on('init')
+
+
+
 
 )
 

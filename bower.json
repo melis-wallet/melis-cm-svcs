@@ -1,8 +1,8 @@
 {
   "name": "melis-cm-svcs",
   "dependencies": {
-    "moment": "~2.18.1",
-    "moment-timezone": "~0.5.4",
+    "moment": "~2.22.2",
+    "moment-timezone": "~0.5.17",
     "blob-polyfill": "^1.0.20150320"
   }
 }

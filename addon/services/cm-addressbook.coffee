@@ -1,10 +1,13 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import { get, set, getProperties } from '@ember/object'
+
+import Logger from 'melis-cm-svcs/utils/logger'
 
 
-CmAddressbook = Ember.Service.extend(
+CmAddressbook = Service.extend(
 
-  cm: Ember.inject.service('cm-session')
-  store: Ember.inject.service('simple-store')
+  cm: service('cm-session')
+  store: service('simple-store')
 
   fetched: false
 
@@ -24,7 +27,7 @@ CmAddressbook = Ember.Service.extend(
         store.push('ab-entry', addr)
       )
     ).catch((err) ->
-      Ember.Logger.error('[CM] Addressbook, failed fetching data.')
+      Logger.error('[CM] Addressbook, failed fetching data.')
       throw err
     )
 
@@ -43,33 +46,33 @@ CmAddressbook = Ember.Service.extend(
 
   push: (entry) ->
     api = @get('cm.api')
-    Ember.Logger.debug('[abook] push: ', Ember.get(entry, 'serialized'))
-    api.abAdd(Ember.get(entry, 'serialized')).then((res) =>
+    Logger.debug('[abook] push: ', get(entry, 'serialized'))
+    api.abAdd(get(entry, 'serialized')).then((res) =>
       @get('store').push('ab-entry', res.entry)
     ).catch((err) ->
-      Ember.Logger.error "Error saving AB entry: ", err
+      Logger.error "Error saving AB entry: ", err
       throw err
     )
 
 
   update: (entry) ->
     api = @get('cm.api')
-    Ember.Logger.debug('[abook] update: ', Ember.get(entry, 'serialized'))
-    api.abUpdate(Ember.get(entry, 'serialized')).then((res) =>
+    Logger.debug('[abook] update: ', get(entry, 'serialized'))
+    api.abUpdate(get(entry, 'serialized')).then((res) =>
       @get('store').push('ab-entry', res.entry)
     ).catch((err) ->
-      Ember.Logger.error "Error updating AB entry: ", err
+      Logger.error "Error updating AB entry: ", err
       throw err
     )
 
 
   delete: (entry) ->
     api = @get('cm.api')
-    Ember.Logger.debug('[abook] delete: ', Ember.get(entry, 'serialized'))
-    api.abDelete(Ember.get(entry, 'serialized')).then((res) =>
+    Logger.debug('[abook] delete: ', get(entry, 'serialized'))
+    api.abDelete(get(entry, 'serialized')).then((res) =>
       @get('store').remove('ab-entry', entry.id)
     ).catch((err) ->
-      Ember.Logger.error "Error deleting AB entry: ", err
+      Logger.error "Error deleting AB entry: ", err
       throw err
     )
 

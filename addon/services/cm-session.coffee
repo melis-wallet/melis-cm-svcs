@@ -1,10 +1,19 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from "@ember/object/evented"
+import { get, set, getProperties } from "@ember/object"
+import { A }  from '@ember/array'
+import { alias, filterBy } from "@ember/object/computed"
+import { isBlank, isPresent } from "@ember/utils"
+import { assert } from "@ember/debug"
+import RSVP from 'rsvp'
 import CMCore from 'npm:melis-api-js'
 import Configuration from 'melis-cm-svcs/utils/configuration'
 import SessionEvents from 'melis-cm-svcs/mixins/session-events'
 import ModelFactory from 'melis-cm-svcs/mixins/simple-model-factory'
 import Account from 'melis-cm-svcs/models/account'
 import { storageFor } from 'ember-local-storage'
+import Logger from 'melis-cm-svcs/utils/logger'
+import { copy } from 'ember-copy'
 
 C = CMCore.C
 
@@ -18,7 +27,7 @@ TFA_PIN_FALLBACK=true
 IGNORE_EXS = ['TransitionAborted', 'CmInvalidDeviceException']
 
 
-CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFactory,
+CmSessionService = Service.extend(Evented, SessionEvents, ModelFactory,
 
 
   #
@@ -84,7 +93,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   # Credentials service
   #
-  credentials: Ember.inject.service('cm-credentials')
+  credentials: service('cm-credentials')
 
   #
   # Localstorage registry for the wallet
@@ -94,22 +103,22 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   # queue of promises waiting for connect
   #
-  waitingConnect: Ember.A()
+  waitingConnect: A()
 
   #
   # queue of promises waiting for ready
   #
-  waitingReady: Ember.A()
+  waitingReady: A()
 
   #
   # a message given by the server at connect
   #
-  connectMessage: Ember.computed.alias('config.message')
+  connectMessage: alias('config.message')
 
   #
   #
   #
-  network:  Ember.computed.alias('config.network')
+  network:  alias('config.network')
 
   #
   #
@@ -120,12 +129,12 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   #
   #
-  globalCurrency: Ember.computed.alias('walletstate.currency')
+  globalCurrency: alias('walletstate.currency')
 
   #
   #
   #
-  locale: Ember.computed.alias('walletstate.locale')
+  locale: alias('walletstate.locale')
 
 
   #
@@ -142,7 +151,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   # report errors and other operational states
   #
-  telemetryEnabled: Ember.computed.alias('walletstate.telemetryEnabled')
+  telemetryEnabled: alias('walletstate.telemetryEnabled')
 
   #
   #
@@ -153,7 +162,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   # list of supported currencies
   #
   currencies: ( ->
-    Ember.A(@get('config.currencies'))
+    A(@get('config.currencies'))
   ).property('config')
 
 
@@ -167,7 +176,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   # List of accts that are not hidden
   #
-  visibleAccts: Ember.computed.filterBy('accounts', 'invisible', false)
+  visibleAccts: filterBy('accounts', 'invisible', false)
 
   #
   #
@@ -180,7 +189,13 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   # Available coins on this backend
   #
-  availableCoins: ( -> @getWithDefault('config.coins', [])).property('config.coins')
+  availableCoins: ( -> @getWithDefault('config.backends', [])).property('config.backends')
+
+
+  #
+  # Users can create accounts for these coins
+  #
+  enabledCoins: alias('config.coins')
 
   #
   # Ran at initialization
@@ -196,7 +211,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       else
         {apiDiscoveryUrl: @apiDiscoveryUrl}
 
-    Ember.Logger.info '[CM Session] Initializing. Configuration is: ', config
+    Logger.info '[CM Session] Initializing. Configuration is: ', config
 
     api = new CMCore(config)
     @setProperties
@@ -206,7 +221,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     @trigger('client-init')
 
     if @get('autoConnect')
-      Ember.Logger.info '[CM Session] Automatic connect'
+      Logger.info '[CM Session] Automatic connect'
       @connect()
 
     if @get('disableAutoReconnect')
@@ -224,6 +239,30 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       version: Configuration.appVersion
     }
   ).property()
+
+  #
+  #
+  #
+  latestVersion: alias('config.currentClientVersion')
+
+
+  #
+  #
+  #
+  versionCode: ( ->
+    try
+      if(v = Configuration.appVersion)
+        [major, minor, patch] = v.split('+')[0].replace('-', '').split('.')
+        (major * 1000000) + (minor * 10000) + (patch * 100);
+    catch
+  ).property()
+
+  #
+  #
+  #
+  outdatedClient: ( ->
+    @get('versionCode') < @get('latestVersion')
+  ).property('versionCode', 'latestVersion')
 
 
   #
@@ -252,8 +291,8 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     api.connect(options).then( (config) =>
 
       if config
-        Ember.Logger.info "[CM Session] Connect success."
-        @checkClockSkew(Ember.get(config, 'ts'))
+        Logger.info "[CM Session] Connect success."
+        @checkClockSkew(get(config, 'ts'))
 
         if scheduled = @get('scheduledOpen')
           @set('scheduledOpen', null)
@@ -265,7 +304,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
         @set('connectSucceeded', true)
         @trigger('net-first-connect', self)
       else
-        Ember.Logger.error "[CM Session] Connect succeded but no config received."
+        Logger.error "[CM Session] Connect succeded but no config received."
         @setProperties
           connected: false
           connectFailed: true
@@ -274,7 +313,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
         connected: false
         connectFailed: err
 
-      Ember.Logger.error "[CM Session] Connect failed '#{err}'"
+      Logger.error "[CM Session] Connect failed '#{err}'"
       throw err
     ).finally( =>
       @set 'connecting', false
@@ -288,9 +327,9 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   reconnect: ( ->
     api = @get('api')
     api.connect().then((config) =>
-      Ember.Logger.info "[CM Session] Re-Connect success."
+      Logger.info "[CM Session] Re-Connect success."
     ).catch((err) =>
-      Ember.Logger.error "[CM Session] Re-Connect failed '#{err}'"
+      Logger.error "[CM Session] Re-Connect failed '#{err}'"
       throw err
     )
   )
@@ -309,7 +348,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   enrollWallet: (pin) ->
 
-    Ember.assert('Wallet not open', !@get('currentWallet'))
+    assert('Wallet not open', !@get('currentWallet'))
 
     api = @get('api')
     creds = @get('credentials')
@@ -325,13 +364,13 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       api.deviceSetPassword(deviceName, pin)
     ).then( (res) ->
       deviceId = res.deviceId
-      Ember.assert('Blank deviceId', !Ember.isBlank(deviceId))
+      assert('Blank deviceId', !isBlank(deviceId))
 
       api.deviceGetPassword(deviceId, pin)
     ).then( (res) ->
       creds.storeCredentials(credentials, deviceId, res.password)
     ).catch( (err) =>
-      Ember.Logger.error '[CM Session] error enrolling wallet: ', err
+      Logger.error '[CM Session] error enrolling wallet: ', err
       @walletClose()
       throw err
     )
@@ -351,12 +390,12 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
     api.deviceSetPassword(deviceName, pin).then((res) ->
       pairDeviceId = res.deviceId
-      Ember.assert('Blank pairDeviceId', !Ember.isBlank(pairDeviceId))
+      assert('Blank pairDeviceId', !isBlank(pairDeviceId))
       # the other's device pass
       api.deviceGetPassword(pairDeviceId, pin)
     ).then((res) ->
       pairSecret = res.password
-      Ember.assert('Blank pairSecret', !Ember.isBlank(pairSecret))
+      assert('Blank pairSecret', !isBlank(pairSecret))
 
       # this device pass
       self.deviceGetPassword(pin)
@@ -364,7 +403,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       secret = creds.exportForPairing(res.password, pairSecret, pairDeviceId)
       return(deviceId: pairDeviceId, secret: secret)
     ).catch((err) ->
-      Ember.Logger.error '[CM Session] error export wallet: ', err
+      Logger.error '[CM Session] error export wallet: ', err
       throw err
     )
 
@@ -385,20 +424,20 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
               else
                 creds.mnemonicToEntropy(mnemonic)
 
-            givenSeed = creds.entropyToSeed(Ember.get(givenEntropy, 'entropy'))
+            givenSeed = creds.entropyToSeed(get(givenEntropy, 'entropy'))
           catch e
-            Ember.Logger.debug('Check Failed: ', e)
+            Logger.debug('Check Failed: ', e)
 
           seed = creds.decryptSecret(res.password, eSeed)
           (seed == givenSeed) && givenSeed
         else
           false
       ).catch( (err) =>
-        Ember.Logger.error '[CM Session] error verifying credentials: ', err
+        Logger.error '[CM Session] error verifying credentials: ', err
         throw err
       )
     else
-      Ember.RSVP.resolve(false)
+      RSVP.resolve(false)
 
 
   validateBackup: (pin, generator, passphrase) ->
@@ -415,18 +454,18 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
               generator = creds.decryptGenerator(generator, passphrase)
             givenSeed = creds.entropyToSeed(generator)
           catch e
-            Ember.Logger.debug('Check Failed: ', e)
+            Logger.debug('Check Failed: ', e)
 
           seed = creds.decryptSecret(res.password, eSeed)
           (seed == givenSeed) && givenSeed
         else
           false
       ).catch( (err) =>
-        Ember.Logger.error '[CM Session] error verifying backup: ', err
+        Logger.error '[CM Session] error verifying backup: ', err
         throw err
       )
     else
-      Ember.RSVP.resolve(false)
+      RSVP.resolve(false)
 
   importFromCreds: (pin, credentials) ->
     api = @get('api')
@@ -441,19 +480,19 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
         api.deviceSetPassword(deviceName, pin)
       ).then( (res)->
         deviceId = res.deviceId
-        Ember.assert('Blank deviceId', !Ember.isBlank(deviceId))
+        assert('Blank deviceId', !isBlank(deviceId))
 
         api.deviceGetPassword(deviceId, pin)
       ).then( (res) ->
         creds.storeCredentials(credentials, deviceId, res.password)
         creds.set('backupConfirmed', true)
       ).catch( (err) =>
-        Ember.Logger.error '[CM Session] error importing wallet: ', err
+        Logger.error '[CM Session] error importing wallet: ', err
         @walletClose()
         throw err
       )
     else
-      Ember.RSVP.reject(msg: 'unable to get valid credentials')
+      RSVP.reject(msg: 'unable to get valid credentials')
 
 
   importForPairing: (data, pin) ->
@@ -467,9 +506,9 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       adata = JSON.parse(decodeURIComponent(pdata.adata))
       deviceId = adata.ident
     catch e
-      Ember.RSVP.reject(e)
+      RSVP.reject(e)
 
-    Ember.RSVP.reject(msg: 'unable to get deviceID') unless deviceId
+    RSVP.reject(msg: 'unable to get deviceID') unless deviceId
 
     self = @
 
@@ -477,21 +516,21 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     creds.set('devicename', 'Paired Device')
 
     api.deviceGetPassword(deviceId, pin).then((res) ->
-      throw {ex: 'WrongPin', msg: 'unable to get device password'} if Ember.isBlank(res.password)
+      throw {ex: 'WrongPin', msg: 'unable to get device password'} if isBlank(res.password)
       credentials = creds.importForPairing(res.password, data)
       self.importFromCreds(pin, credentials)
     ).then( (res) ->
       imported = res
       api.devicesDelete(deviceId)
     ).then( (res) ->
-      deviceName = Ember.get(res, 'devices.firstObject.name')
+      deviceName = get(res, 'devices.firstObject.name')
       if deviceName
         api.deviceUpdate(creds.get('deviceId'), deviceName)
         creds.set('deviceName', deviceName)
     ).then( ->
       return(imported)
     ).catch( (err) ->
-      Ember.Logger.error '[CM Session] error importing for pairing: ', err
+      Logger.error '[CM Session] error importing for pairing: ', err
       throw err
     )
 
@@ -500,26 +539,26 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   validateGenerator: (entropy, passphrase) ->
     creds = @get('credentials')
 
-    return Ember.RSVP.reject(msg: 'Wallet already open') if @get('currentWallet')
+    return RSVP.reject(msg: 'Wallet already open') if @get('currentWallet')
 
     if creds.isGeneratorEncrypted(entropy)
-      if Ember.isBlank(passphrase)
-        Ember.RSVP.reject(msg: 'Encrypted generator and no pass')
+      if isBlank(passphrase)
+        RSVP.reject(msg: 'Encrypted generator and no pass')
       else
         try
           entropy = creds.decryptGenerator(entropy, passphrase)
         catch e
-          Ember.RSVP.reject(msg: e)
+          RSVP.reject(msg: e)
 
     credentials = creds.prepareCredentials(entropy)
 
     @get('api').walletOpen(credentials.seed).then((wallet) =>
       @get('api').walletClose()
     ).then( ->
-      Ember.Logger.debug '[CM Session] valid credentials'
+      Logger.debug '[CM Session] valid credentials'
       true
     ).catch( (err) =>
-      Ember.Logger.error  '[CM Session] TryOpen failed: ', err
+      Logger.error  '[CM Session] TryOpen failed: ', err
       throw err
     )
 
@@ -530,9 +569,9 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     try
       entropy =  creds.importMnemonic(mnemonic, passphrase).entropy
     catch e
-      return Ember.RSVP.reject(msg: e)
+      return RSVP.reject(msg: e)
 
-    return Ember.RSVP.reject(msg: 'Import failed') unless entropy
+    return RSVP.reject(msg: 'Import failed') unless entropy
     @validateGenerator(entropy, passphrase)
 
 
@@ -543,12 +582,12 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     try
       entropy =  creds.importMnemonic(mnemonic, passphrase).entropy
     catch e
-      return Ember.RSVP.reject(msg: e)
+      return RSVP.reject(msg: e)
 
     if entropy
       @importWalletFromGen(pin, entropy)
     else
-      Ember.RSVP.reject(msg: 'Import failed')
+      RSVP.reject(msg: 'Import failed')
 
 
   importWalletFromGen: (pin, generator, passphrase) ->
@@ -556,13 +595,13 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     creds.reset()
 
     if creds.isGeneratorEncrypted(generator)
-      if Ember.isBlank(passphrase)
-        Ember.RSVP.reject(msg: 'Encrypted generator and no pass')
+      if isBlank(passphrase)
+        RSVP.reject(msg: 'Encrypted generator and no pass')
       else
         try
           generator = creds.decryptGenerator(generator, passphrase)
         catch e
-          Ember.RSVP.reject(msg: e)
+          RSVP.reject(msg: e)
 
     credentials = creds.initializeCredentials(generator)
     @importFromCreds(pin, credentials)
@@ -575,7 +614,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     api.deviceUpdate(creds.get('deviceId'), name).then((res) =>
       creds.set('deviceName', name)
     ).catch( (err) ->
-      Ember.Logger.error '[CM Session] renaming device: ', err
+      Logger.error '[CM Session] renaming device: ', err
       throw err
     )
 
@@ -585,22 +624,22 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     api = @get('api')
 
     deviceId = creds.get('deviceId')
-    return Ember.RSVP.reject('No Device Id') if Ember.isBlank(deviceId)
+    return RSVP.reject('No Device Id') if isBlank(deviceId)
 
-    Ember.Logger.debug '[CM Session] get device password for ', deviceId
+    Logger.debug '[CM Session] get device password for ', deviceId
     api.deviceGetPassword(deviceId, pin).then((res) ->
-      Ember.Logger.debug '[CM Session] got device password: ', res
-      if !Ember.isBlank(res) && !Ember.isBlank(res.attemptsLeft)
+      Logger.debug '[CM Session] got device password: ', res
+      if !isBlank(res) && !isBlank(res.attemptsLeft)
         creds.set('attemptsLeft', res.attemptsLeft)
 
       return res
     ).catch((err) =>
       if err.ex == 'CmInvalidDeviceException'
         if err.attemptsLeft
-          Ember.Logger.warn 'Pin wrong, attempts left: ', err.attemptsLeft
+          Logger.warn 'Pin wrong, attempts left: ', err.attemptsLeft
           creds.set('attemptsLeft', res.attemptsLeft)
         else
-          Ember.Logger.warn 'Pin Attempts expired, deleting credentials'
+          Logger.warn 'Pin Attempts expired, deleting credentials'
           creds.reset()
       throw err
     )
@@ -611,20 +650,20 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     api = @get('api')
 
     deviceId = creds.get('deviceId')
-    return Ember.RSVP.reject('No Device Id') if Ember.isBlank(deviceId)
+    return RSVP.reject('No Device Id') if isBlank(deviceId)
 
-    Ember.Logger.debug '[CM Session] changing pin for ', deviceId
+    Logger.debug '[CM Session] changing pin for ', deviceId
     api.deviceChangePin(deviceId, oldPin, newPin).then((res) ->
-      if !Ember.isBlank(res) && !Ember.isBlank(res.attemptsLeft)
+      if !isBlank(res) && !isBlank(res.attemptsLeft)
         creds.set('attemptsLeft', res.attemptsLeft)
       return res
     ).catch((err) =>
       if err.ex == 'CmInvalidDeviceException'
         if err.attemptsLeft
-          Ember.Logger.warn 'Pin wrong, attempts left: ', err.attemptsLeft
+          Logger.warn 'Pin wrong, attempts left: ', err.attemptsLeft
           creds.set('attemptsLeft', res.attemptsLeft)
         else
-          Ember.Logger.warn 'Pin Attempts expired, deleting credentials'
+          Logger.warn 'Pin Attempts expired, deleting credentials'
           creds.reset()
       throw err
     )
@@ -635,16 +674,16 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     creds = @get('credentials')
 
     eSeed = creds.get('encryptedSeed')
-    return Ember.RSVP.reject('No credentials') if Ember.isBlank(eSeed)
+    return RSVP.reject('No credentials') if isBlank(eSeed)
 
     @deviceGetPassword(pin).then((res) =>
-      throw {ex: 'WrongPin', msg: 'Wrong Pin', attemptsLeft: res.attemptsLeft} if Ember.isBlank(res.password)
+      throw {ex: 'WrongPin', msg: 'Wrong Pin', attemptsLeft: res.attemptsLeft} if isBlank(res.password)
       seed = creds.decryptSecret(res.password, eSeed)
-      throw {ex: 'SeedError', msg: 'No seed or wrong password'} if Ember.isBlank(seed)
+      throw {ex: 'SeedError', msg: 'No seed or wrong password'} if isBlank(seed)
 
       @walletOpen(seed)
     ).catch((err) ->
-      Ember.Logger.error '[CM Session] error reopening wallet: ', err
+      Logger.error '[CM Session] error reopening wallet: ', err
       throw err
     )
 
@@ -656,17 +695,18 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     try
       deviceId = @get('credentials.deviceId')
     catch
-      deviceId = 'test-device'
 
+    if Ember.testing
+      deviceId ||= 'test-device'
     sessionName = DEFAULT_SESSION_NAME
 
     @get('api').walletRegister(seed, sessionName: sessionName, deviceId: deviceId, usePinAsTfa: @get('tfaPinFallback')).then( (wallet) =>
-      Ember.Logger.info "registered wallet: '#{seed}'", wallet
-      @set('currentWallet', Ember.copy(wallet, true))
+      Logger.info "registered wallet: '#{seed}'", wallet
+      @set('currentWallet', copy(wallet, true))
 
       return wallet
     ).catch((err) ->
-      Ember.Logger.error '[CM Session] error registering wallet: ', err
+      Logger.error '[CM Session] error registering wallet: ', err
       throw err
     )
 
@@ -676,7 +716,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   # we want to open this wallet now, or as soon the backend is connected
   #
   scheduleWalletOpen: (data) ->
-    scheduled = Ember.RSVP.defer()
+    scheduled = RSVP.defer()
 
 
     if @get('connected')
@@ -703,19 +743,20 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     try
       deviceId = @get('credentials.deviceId')
     catch
-      deviceId = 'test-device'
+      if Ember.testing
+        deviceId = 'test-device'
 
     sessionName = DEFAULT_SESSION_NAME
 
-    Ember.Logger.debug "[CM Session] opening wallet: #{seed}"
+    Logger.debug "[CM Session] opening wallet: #{seed}"
     @get('api').walletOpen(seed, sessionName: sessionName, deviceId: deviceId, usePinAsTfa: @get('tfaPinFallback')).then((wallet) =>
-      @set('currentWallet', Ember.copy(wallet, true))
-      Ember.Logger.debug '[CM Session] wallet open', wallet
+      @set('currentWallet', copy(wallet, true))
+      Logger.debug '[CM Session] wallet open', wallet
       @_getWalletMetadata()
       return wallet
     ).catch( (err) =>
       @set('walletOpenFailed', true)
-      Ember.Logger.error  '[CM Session] error opening wallet: ', err
+      Logger.error  '[CM Session] error opening wallet: ', err
       throw err
     )
 
@@ -724,7 +765,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   #
   waitForConnect: ->
-    deferred = Ember.RSVP.defer()
+    deferred = RSVP.defer()
 
     if @get('connected')
       deferred.resolve()
@@ -735,7 +776,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
 
   waitForReady: ->
-    deferred = Ember.RSVP.defer()
+    deferred = RSVP.defer()
 
     if @get('ready')
       deferred.resolve()
@@ -747,32 +788,32 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
   walletClose: ->
     if (wallet = @get('currentWallet'))
-      Ember.Logger.debug '[CM Session] closing wallet'
+      Logger.debug '[CM Session] closing wallet'
       @get('api').walletClose().then( (res) =>
         @set('currentAccount', null)
         @set('currentWallet', null)
         @set('ready', false)
         return(res)
       ).catch((err) ->
-        Ember.Logger.error  '[CM Session] close account failed', err
+        Logger.error  '[CM Session] close account failed', err
         throw err
       )
     else
-      Ember.Logger.debug '[CM Session] wallet already close'
-      Ember.RSVP.resolve()
+      Logger.debug '[CM Session] wallet already close'
+      RSVP.resolve()
 
 
   accountDelete: (account) ->
-    Ember.Logger.debug "[CM Session] delete account:", account
+    Logger.debug "[CM Session] delete account:", account
 
-    @get('api').accountDelete(Ember.get(account, 'cmo')).catch( (err) =>
-      Ember.Logger.error  '[CM Session] error deleting account: ', err
+    @get('api').accountDelete(get(account, 'cmo')).catch( (err) =>
+      Logger.error  '[CM Session] error deleting account: ', err
       throw err
     )
 
 
   accountRemove: (id) ->
-    Ember.Logger.debug "[CM Session] removing account with id:", id
+    Logger.debug "[CM Session] removing account with id:", id
 
     acct = @get('accounts').findBy('pubId', id)
     if acct
@@ -780,19 +821,19 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
 
   accountSecure: (id, state) ->
-    Ember.Logger.debug "[CM Session] secure state account:", state, id
+    Logger.debug "[CM Session] secure state account:", state, id
 
     acct = @get('accounts').findBy('pubId', id)
     if acct
-      Ember.set(acct, 'secure', state)
+      set(acct, 'secure', state)
 
 
   accountPush: (data) ->
-    acct = @get('accounts').findBy('pubId', data.account.pubId)
-    balance = Ember.get(data, 'balance')
+    acct = @get('accounts').findBy('pubId', get(data, 'account.pubId'))
+    balance = get(data, 'balance')
     if acct
-      acct.set('cmo', data.account)
-      acct.set('balance', balance) unless Ember.isBlank(balance)
+      acct.set('cmo', get(data, 'account'))
+      acct.set('balance', balance) unless isBlank(balance)
       return acct
     else
       newAcct = @createSimpleModel('account', cmo: data.account, balance: balance)
@@ -801,23 +842,23 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
 
   accountCreate: (data) ->
-    Ember.Logger.debug "[CM Session] create account: type: #{data.type} - ", data
+    Logger.debug "[CM Session] create account: type: #{data.type} - ", data
 
     @get('api').accountCreate(data).then((data) =>
-      Ember.Logger.debug  '[CM Session] account created', data
+      Logger.debug  '[CM Session] account created', data
       @accountPush(data)
     ).catch( (err) =>
-      Ember.Logger.error  '[CM Session] error creating account: ', err
+      Logger.error  '[CM Session] error creating account: ', err
       throw err
     )
 
   accountJoin: (code, meta) ->
-    Ember.Logger.debug "[CM Session] join account with code: '#{code}' - ", meta
+    Logger.debug "[CM Session] join account with code: '#{code}' - ", meta
     @get('api').accountJoin(code, meta).then((data) =>
-      Ember.Logger.debug  '[CM Session] account joined', data
+      Logger.debug  '[CM Session] account joined', data
       @accountPush(data)
     ).catch( (err) =>
-      Ember.Logger.error  '[CM Session] error joining account: ', err
+      Logger.error  '[CM Session] error joining account: ', err
       throw err
     )
 
@@ -825,23 +866,25 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     acct = @get('accounts').findBy('pubId', id)
     if acct
       @set 'currentAccount', acct
+      Logger.info "[CM Session] selected account: #{@get('currentAccount.cmo.meta.name')} "
+      @get('currentAccount')
     else if fallback
       @set 'currentAccount', @get('visibleAccts.firstObject')
-    Ember.Logger.info "[CM Session] selected account: #{@get('currentAccount.cmo.meta.name')} "
-
+      Logger.info "[CM Session] selected fallback account: #{@get('currentAccount.cmo.meta.name')} "
+      @get('currentAccount')
 
   payPrepare: (recipients, options = {}) ->
     acct = options.account || @get('currentAccount.cmo')
     if acct
       @get('api').payPrepare(acct, recipients, options).catch((err) ->
-        Ember.Logger.error  '[CM Session] error in payment prepare: ', err
+        Logger.error  '[CM Session] error in payment prepare: ', err
         throw err
       )
 
 
   payConfirm: (txstate, tfa) ->
     @get('api').payConfirm(txstate, tfa).catch((err) ->
-        Ember.Logger.error  '[CM Session] error in payment confirm: ', err
+        Logger.error  '[CM Session] error in payment confirm: ', err
         throw err
       )
 
@@ -849,21 +892,23 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   checkClockSkew: (ts) ->
     if ts
       skew = (moment.now() - ts)
-      Ember.Logger.debug  '[CM Session] clock skew is (ms): ', skew
+      Logger.debug  '[CM Session] clock skew is (ms): ', skew
       @set('lampField.clockSkew', (Math.abs(skew) > CLOCK_SKEW))
     else
-      Ember.Logger.info  '[CM Session] no skew information'
+      Logger.info  '[CM Session] no skew information'
 
 
   refreshAccount: (account) ->
-    Ember.Logger.debug  '[CM Session] refreshing account: ', account.get('name')
+    Logger.debug  '[CM Session] refreshing account: ', account.get('name')
     @get('api').accountRefresh(account.get('cmo')).then((data) =>
       acct = @get('accounts').findBy('pubId', data.account.pubId)
       if acct
-        acct.set('cmo', data.account)
-        acct.set('balance', data.balance)
+        acct.setProperties
+          cmo: data.account
+          balance: data.balance
+          info: @get('api').peekAccountInfo(acct)
     ).catch((err) ->
-      Ember.Logger.error  '[CM Session] error refreshing account: ', e
+      Logger.error  '[CM Session] error refreshing account: ', e
     )
 
 
@@ -871,6 +916,19 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     accounts = @get('cm.accounts')
     @get('accounts').forEach( (acc) => @refreshAccount(acc))
 
+
+  restoreAccounts: (accountsData) ->
+    Logger.debug  '[CM Session] restoring accounts from recovery event.'
+    {accounts, balances} = getProperties(accountsData, 'accounts', 'balances')
+
+    if (!isBlank(accounts) && !isBlank(balances) && (wallet = @get('currentWallet')))
+      for index, acct of accounts
+        if !isBlank(acct) && (id = get(acct, 'pubId'))
+          try
+            obj = @accountPush(account: acct, balance: balances[id])
+            obj.set('info', @get('api').peekAccountInfo(acct))
+          catch e
+            Logger.error('[] Restire error:' , e)
 
   findMasterFor: (pubId) ->
     @get('accounts')?.find((a) ->
@@ -889,7 +947,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
       @set('credentials.backupChecked', data.backupChecked) if data.backupChecked
 
       @get('api').walletMetaSet('backupState', @get('credentials.backupState')).then( (res) =>
-        Ember.Logger.debug("Backup state: ", res)
+        Logger.debug("Backup state: ", res)
       )
 
   #
@@ -897,17 +955,17 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
   #
   _setupAccounts: (->
     if wallet = @get('currentWallet')
-      accounts = Ember.A()
-      for index, acct of Ember.get(wallet, 'accounts')
-        if !Ember.isBlank(acct)
+      accounts = A()
+      for index, acct of get(wallet, 'accounts')
+        if !isBlank(acct)
           obj = @createSimpleModel('account', cmo: acct)
           obj.set('info', @get('api').peekAccountInfo(acct))
-          obj.set('balance', wallet.balances[index]) if Ember.isPresent(wallet.balances[index])
+          obj.set('balance', wallet.balances[index]) if isPresent(wallet.balances[index])
           accounts.pushObject(obj)
       @set('accounts', accounts)
 
     else
-      @set('accounts', Ember.A())
+      @set('accounts', A())
   ).observes('currentWallet')
 
 
@@ -922,12 +980,11 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     @set('ready', true) if @get('currentAccount')
   ).observes('currentAccount')
 
-
   _resolveConnected: ( ->
     if @get('connected')
       @get('waitingConnect').forEach (deferred) ->
         deferred.resolve(@)
-      @set('waitingConnect', Ember.A())
+      @set('waitingConnect', A())
   ).observes('connected')
 
 
@@ -935,7 +992,7 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     if @get('ready')
       @get('waitingReady').forEach (deferred) ->
         deferred.resolve(@)
-      @set('waitingReady', Ember.A())
+      @set('waitingReady', A())
   ).observes('ready')
 
 
@@ -948,9 +1005,9 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
     @get('api').walletMetaGet(['backupState', 'coinPrefs']).then( (res) =>
       if res
         @set('walletMeta', res)
-        @set('credentials.backupState', state) if state = Ember.get(res, 'backupState')
+        @set('credentials.backupState', state) if state = get(res, 'backupState')
     ).catch((err) ->
-      Ember.Logger.error  '[CM Session] getting initial state metadata: ', err
+      Logger.error  '[CM Session] getting initial state metadata: ', err
     )
   )
 
@@ -968,12 +1025,13 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
 
 
   _setupTelemetry: ( ->
-    return if @get('testMode')
+    return if @get('testMode') || Ember.testing
 
     report_error = @set('report_error', (e) =>
-      return if (Ember.isBlank(e.name) || IGNORE_EXS.includes(e.name))
-      Ember.Logger.error "---- ERROR REPORTING ----"
-      Ember.Logger.error e
+
+      return if (isBlank(e.name) || IGNORE_EXS.includes(e.name))
+      Logger.error "---- ERROR REPORTING ----"
+      Logger.error e
       return unless @get('telemetryEnabled')
       try
         @get('api').logException(
@@ -982,14 +1040,14 @@ CmSessionService = Ember.Service.extend(Ember.Evented, SessionEvents, ModelFacto
           @get('credentials.deviceId'),
           @get('userAgent')
         ).catch((e) ->
-          Ember.Logger.debug "[CM] Telemetry send failed."
+          Logger.debug "[CM] Telemetry send failed."
         )
       catch error
-        Ember.Logger.debug "[CM] Telemetry send failed."
+        Logger.debug "[CM] Telemetry send failed."
     )
 
     Ember.onerror = report_error
-    Ember.RSVP.configure('onerror', report_error)
+    RSVP.configure('onerror', report_error)
     window.onerror = report_error
   ).on('init')
 

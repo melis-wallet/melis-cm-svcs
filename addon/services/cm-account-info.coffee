@@ -1,6 +1,12 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from '@ember/object/evented'
+import { get, set, getProperties } from '@ember/object'
+import { isBlank } from '@ember/utils'
+import RSVP from 'rsvp'
+
 import CMCore from 'npm:melis-api-js'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
+import Logger from 'melis-cm-svcs/utils/logger'
 
 C = CMCore.C
 
@@ -8,47 +14,17 @@ DELAY = 4000
 LABELS_DELAY = 3000
 STORAGE_ACCOUNT_PTR = /^storage\:account-state\:account\:(.+)$/
 
-CmAccountInfo = Ember.Service.extend(Ember.Evented,
+CmAccountInfo = Service.extend(Evented,
 
-  cm: Ember.inject.service('cm-session')
+  cm: service('cm-session')
 
-  #
-  #
-  #
-  currentLabels: (->
-    @get('cm.currentAccount.labels')
-  ).property('cm.currentAccount.labels')
-
-  #
-  #
-  #
-  setupCurrentLabels: (account) ->
-    account ||= @get('cm.currentAccount')
-    @getLabelsFor(account) if account
-
-  #
-  #
-  #
-  getLabelsFor: (account, force) ->
-
-    api = @get('cm.api')
-
-    if force || Ember.isBlank(account.get('labels'))
-      api.getAllLabels(account.get('cmo')).then((res) =>
-        account.set('labels', res)
-      ).catch((err) ->
-        Ember.Logger.error("[Account Info], failed getting labels", err)
-        throw err
-      )
-    else
-      Ember.RSVP.resolve(account.get('labels'))
 
   #
   #
   #
   getAllAccountsInfo: ->
     if (accounts = @get('cm.accounts'))
-      Ember.RSVP.all(accounts.map((account) =>
+      RSVP.all(accounts.map((account) =>
         @accountGetInfo(account)
       )).then( =>
         @trigger('load-all-finished')
@@ -57,19 +33,16 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   #
   #
   #
-  accountGetInfo: (account) ->
-    account.set('info', @get('cm.api').peekAccountInfo(account.get('cmo')))
+  accountGetInfo: (account, refresh) ->
 
-    return
-
-    if force || Ember.isBlank(account.get('info'))
+    if refresh || isBlank(account.get('info'))
       api = @get('cm.api')
-      api.accountGetInfo(account.get('cmo')).then((res) =>
-        Ember.Logger.debug("Account info for #{account.pubId}: ", res)
-        account.set('info', res)
+      api.accountRefresh(account.get('cmo')).then((res) =>
+        Logger.debug("Account info for #{account.pubId}: ", res)
+        account.set('info', api.peekAccountInfo(account.get('cmo')))
 
       ).catch((err) ->
-        Ember.Logger.error("[Account Info], failed getting info", err)
+        Logger.error("[Account Info], failed getting info", err)
         throw err
       )
 
@@ -78,7 +51,6 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   #
   accountChanged: (->
     if @get('cm.ready') && (account = @get('cm.currentAccount'))
-      waitIdleTime(LABELS_DELAY).then( => @getLabelsFor(account, true) unless @get('isDestroyed'))
       @accountGetInfo(account)
   ).observes('cm.currentAccount')
 
@@ -89,11 +61,15 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   refreshCmo: (account) ->
     if account
       api = @get('cm.api')
-      api.accountRefresh(account.cmo).then((res) ->
-        account.set('cmo', res.account)
-        account.set('balance', res.balance)
+      api.accountRefresh(account.get('cmo')).then((res) ->
+        Logger.debug("Account refresh for #{account.pubId}: ", res)
+        account.setProperties(
+          cmo: res.account
+          info: api.peekAccountInfo(account.get('cmo'))
+          balance: res.balance
+        )
       ).catch((err) ->
-        Ember.Logger.error("[Account Info], failed refresh: ", err)
+        Logger.error("[Account Info], failed refresh: ", err)
         throw err
       )
 
@@ -104,11 +80,9 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
     accounts = @get('cm.accounts')
     accounts.forEach( (acc) =>
       pubId = acc.get('cmo.masterPubId') || acc.get('cmo.pubId')
-      if pubId == Ember.get(event, 'masterPubId')
-        Ember.Logger.debug 'this account has changed', acc
-        @accountGetInfo(acc, true)
-        # Is there a better way to refresh the account only when the LAST co-signer has joined?
-        @refreshCmo(acc)
+      if pubId == get(event, 'masterPubId')
+        Logger.debug 'Account has changed:', acc
+        waitIdleTime(1000).then( => @refreshCmo(acc))
     )
 
   #
@@ -124,10 +98,10 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
         if key && res = key.match(STORAGE_ACCOUNT_PTR)
           accountId = res[1]
           unless accounts.findBy('uniqueId', accountId)
-            Ember.Logger.warn('[Account Info] deleting stored data for stale account: ', accountId)
+            Logger.warn('[Account Info] deleting stored data for stale account: ', accountId)
             localStorage.removeItem(key)
     catch err
-      Ember.Logger.error '[Account Info] Stale account wiper: ', err
+      Logger.error '[Account Info] Stale account wiper: ', err
   #
   #
   #
@@ -163,7 +137,7 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
 
     { totalSignatures,
       minSignatures,
-      hasServer} = Ember.getProperties(account, 'totalSignatures', 'minSignatures', 'hasServer')
+      hasServer} = getProperties(account, 'totalSignatures', 'minSignatures', 'hasServer')
 
     plus = if hasServer then 1 else 0
     numPubKeys = totalSignatures + plus
@@ -178,7 +152,7 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
     if account
       { totalSignatures,
         minSignatures,
-        hasServer} = Ember.getProperties(account, 'totalSignatures', 'minSignatures', 'hasServer')
+        hasServer} = getProperties(account, 'totalSignatures', 'minSignatures', 'hasServer')
       @estimateFees(totalSignatures, minSignatures, hasServer)
 
 
@@ -203,7 +177,7 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
   #
   #
   setup: (->
-    Ember.Logger.info "[Account Info] Started."
+    Logger.info "[Account Info] Started."
 
     @setupListeners()
 
@@ -211,10 +185,9 @@ CmAccountInfo = Ember.Service.extend(Ember.Evented,
     @get('cm').waitForReady().then( -> waitIdleTime(DELAY)).then( ->
       self.prepareAccounts() unless self.get('isDestroyed')
     ).then( =>
-      @setupCurrentLabels()
       self.trigger('init-finished')
     ).catch((err) ->
-      Ember.Logger.error('[Account Info] Error during init: '. err)
+      Logger.error('[Account Info] Error during init: '. err)
       throw err
     )
 

@@ -1,12 +1,18 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import { alias, bool } from '@ember/object/computed'
+import { get, set, getProperties } from '@ember/object'
+import { isBlank, isNone, isEmpty } from '@ember/utils'
+
 import { storageFor } from 'ember-local-storage'
 import Melis from 'npm:melis-credentials-seed'
 import CMCore from 'npm:melis-api-js'
 import wordlist_IT from 'melis-cm-svcs/utils/wordlists/it'
 
+import Logger from 'melis-cm-svcs/utils/logger'
+
 sjcl = CMCore.sjcl
 
-CmCredentialsService = Ember.Service.extend(
+CmCredentialsService = Service.extend(
 
   EXPORT_MAGIC: 'cm-exp-0.1'
 
@@ -14,23 +20,23 @@ CmCredentialsService = Ember.Service.extend(
 
   credstore: storageFor('credentials-store')
 
-  wordlists: Ember.computed.alias('credseed.wordlists')
+  wordlists: alias('credseed.wordlists')
 
   # never actually stored
   currentSeed: null
 
-  deviceId: Ember.computed.alias('credstore.deviceId')
-  deviceName: Ember.computed.alias('credstore.deviceName')
+  deviceId: alias('credstore.deviceId')
+  deviceName: alias('credstore.deviceName')
 
-  encryptedGenerator: Ember.computed.alias('credstore.encryptedGenerator')
-  encryptedSeed: Ember.computed.alias('credstore.encryptedSeed')
+  encryptedGenerator: alias('credstore.encryptedGenerator')
+  encryptedSeed: alias('credstore.encryptedSeed')
 
-  pinAttemptsLeft:  Ember.computed.alias('credstore.pinAttemptsLeft')
+  pinAttemptsLeft:  alias('credstore.pinAttemptsLeft')
 
   backupState:  { backupConfirmed: false, backupChecked: false }
 
-  backupConfirmed:  Ember.computed.alias('backupState.backupConfirmed')
-  backupChecked:  Ember.computed.alias('backupState.backupChecked')
+  backupConfirmed: alias('backupState.backupConfirmed')
+  backupChecked: alias('backupState.backupChecked')
 
   #
   # do we have a set of valid credentials
@@ -63,7 +69,7 @@ CmCredentialsService = Ember.Service.extend(
   prepareCredentials: (entropy) ->
     language = language?.substring(0, 2).toLowerCase() || 'en'
 
-    Ember.assert('No entropy', !Ember.isBlank(entropy))
+    throw('No entropy') if isBlank(entropy)
     seed = @entropyToSeed(entropy)
 
     return(seed: seed, entropy: entropy)
@@ -137,17 +143,17 @@ CmCredentialsService = Ember.Service.extend(
     try
       pdata = JSON.parse(data)
       adata = JSON.parse(decodeURIComponent(pdata.adata))
-      Ember.assert('Not a valid export', (adata.magic == @EXPORT_MAGIC))
+      Logger.error('[Credentials] Not a valid export') unless (adata.magic == @EXPORT_MAGIC)
       return true
     catch e
-      Ember.assert('Parse error', false)
+      Logger.error('[Credentials] Parse error', e)
 
 
   importForPairing: (secret, data) ->
     @validatePairingData(data)
 
     gen = @decryptSecret(secret, data)
-    Ember.assert('Decrypt failed', gen)
+    throw('[Credentials] Decrypt failed') unless gen
 
     @initializeCredentials(gen)
 
@@ -166,7 +172,7 @@ CmCredentialsService = Ember.Service.extend(
 
 
   encryptSecret: (key, secret, adata) ->
-    Ember.assert("Secret is blank!", !Ember.isBlank(secret))
+    throw("Secret is blank!") if isBlank(secret)
     adata ||= ''
     sjcl.encrypt(key, secret, {ks: 256, mode: 'gcm', adata: adata})
 
@@ -191,9 +197,9 @@ CmCredentialsService = Ember.Service.extend(
   checkStorage: ->
     key = @get('credstore._storageKey')
     data = JSON.parse(localStorage.getItem(key))
-    Ember.assert("Storage has failed. No data.", data)
-    storedGen = Ember.get(data, 'encryptedGenerator')
-    Ember.assert("Storage has failed. Data is different.", (storedGen == @get('encryptedGenerator')))
+    throw("[CM Credentials] Storage has failed. No data.") unless data
+    storedGen = get(data, 'encryptedGenerator')
+    throw("[CM Credentials] Storage has failed. Data is different.") unless (storedGen == @get('encryptedGenerator'))
 
   # --
   wordListFor: (language) ->

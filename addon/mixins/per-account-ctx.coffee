@@ -1,6 +1,11 @@
-import Ember from 'ember'
+import Mixin from '@ember/object/mixin'
+import { get, set, getProperties } from '@ember/object'
+import { isBlank, isPresent } from "@ember/utils"
+import { A, isArray }  from '@ember/array'
+import { assert } from '@ember/debug'
 
-PerAccountCtx = Ember.Mixin.create(
+
+PerAccountCtx = Mixin.create(
 
   #
   #
@@ -31,7 +36,7 @@ PerAccountCtx = Ember.Mixin.create(
 
   _getContextForAccount: (account) ->
     ctxs = @get('_ctxs')
-    if account && Ember.isPresent(pubId = Ember.get(account, 'pubId')) && (ctx = ctxs.findBy('pubId', pubId))
+    if account && isPresent(pubId = get(account, 'pubId')) && (ctx = ctxs.findBy('pubId', pubId))
       return ctx
     else
       return ctxs.pushObject(@ctxContainer.create(pubId: pubId, account: account))
@@ -39,11 +44,11 @@ PerAccountCtx = Ember.Mixin.create(
   init: ->
     @_super(arguments...)
 
-    @set '_ctxs', Ember.A()
+    @set '_ctxs', A()
 
     accts = @get('cm.accounts')
-    Ember.assert('per-account-ctx needs access to cm-accounts', Ember.isArray(accts))
-    Ember.assert('per-account-ctx requires an account context container', @ctxContainer)
+    assert('per-account-ctx needs access to cm-accounts', isArray(accts))
+    assert('per-account-ctx requires an account context container', @ctxContainer)
 
     unless @ctxLazyCreation
       accts.forEach((a) => @_getContextForAccount(a))

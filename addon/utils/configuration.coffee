@@ -1,4 +1,5 @@
 import loadConfig from 'melis-cm-svcs/utils/load-config'
+import Logger from 'melis-cm-svcs/utils/logger'
 
 defaults = {
   stompEndpoint: null
@@ -16,7 +17,7 @@ Configuration = {
   testMode: defaults.testMode
 
   load: loadConfig(defaults, (container, config)->
-    Ember.Logger.debug "Config:", config
+    Logger.debug "Config:", config
   )
 }
 

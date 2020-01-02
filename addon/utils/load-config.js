@@ -1,10 +1,11 @@
-import Ember from 'ember';
+import EmberObject from '@ember/object'
+import { typeOf } from '@ember/utils'
 
 export default function(defaults, callback) {
   return function(container, config) {
-    var wrappedConfig = Ember.Object.create(config);
+    var wrappedConfig = EmberObject.create(config);
     for (var property in this) {
-      if (this.hasOwnProperty(property) && Ember.typeOf(this[property]) !== 'function') {
+      if (this.hasOwnProperty(property) && typeOf(this[property]) !== 'function') {
         this[property] = wrappedConfig.getWithDefault(property, defaults[property]);
       }
     }

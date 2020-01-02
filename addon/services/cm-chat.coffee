@@ -1,10 +1,15 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from '@ember/object/evented'
+import { get, set, getProperties } from '@ember/object'
+
 import CMCore from 'npm:melis-api-js'
+
+import Logger from 'melis-cm-svcs/utils/logger'
 
 C = CMCore.C
 
-CmChatService = Ember.Service.extend(Ember.Evented,
-  cm:  Ember.inject.service('cm-session')
+CmChatService = Service.extend(Evented,
+  cm: service('cm-session')
 
   newMessage: (data, account)->
 
@@ -14,7 +19,7 @@ CmChatService = Ember.Service.extend(Ember.Evented,
       # unimplemented
 
   setup: ( ->
-    Ember.Logger.info  "== Starting chat service"
+    Logger.info  "== Starting chat service"
     api = @get('cm.api')
 
     @set '_eventListener', (data) =>

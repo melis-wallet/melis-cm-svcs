@@ -1,14 +1,16 @@
-import Ember from 'ember'
+import Mixin from '@ember/object/mixin'
+import { run } from '@ember/runloop'
 
-ScheduledEvent = Ember.Mixin.create
+ScheduledEvent = Mixin.create
 
   _eventInterval: 60000
 
   schedulePollEvent: (event, interval) ->
     eventInterval = interval || @get('_eventInterval') || 60000
-    Ember.run.later(this, (=>
-      event.apply(this)
-      @set '_timer', @schedulePollEvent(event)
+    run.later(this, (=>
+      unless @isDestroyed
+        event.apply(this)
+        @set '_timer', @schedulePollEvent(event)
     ), eventInterval)
 
   startScheduling: (interval) ->
@@ -17,7 +19,7 @@ ScheduledEvent = Ember.Mixin.create
 
   stopScheduling: ->
     if (timer = @get('_timer'))
-      Ember.run.cancel(timer)
+      run.cancel(timer)
       @set('_timer', null)
 
   onScheduledEvent: ->

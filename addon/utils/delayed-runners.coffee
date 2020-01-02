@@ -1,19 +1,19 @@
-import Ember from 'ember'
-
+import { later } from "@ember/runloop"
+import RSVP from 'rsvp'
 
 waitTime = (time) ->
-  new Ember.RSVP.Promise((resolve, reject) ->
-    Ember.run.later(this, resolve, time)
+  new RSVP.Promise((resolve, reject) ->
+    later(this, resolve, time)
   )
 
 waitIdle = ->
-  new Ember.RSVP.Promise((resolve, reject) ->
+  new RSVP.Promise((resolve, reject) ->
      requestIdleCallback( resolve )
   )
 
 waitIdleTime = (time) ->
-  new Ember.RSVP.Promise((resolve, reject) ->
-    Ember.run.later(this, (->
+  new RSVP.Promise((resolve, reject) ->
+    later(this, (->
       requestIdleCallback( resolve )
     ), time)
   )

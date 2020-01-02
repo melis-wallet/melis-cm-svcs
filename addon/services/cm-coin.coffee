@@ -1,14 +1,23 @@
-import Ember from 'ember'
+import Service, { inject as service } from '@ember/service'
+import Evented from '@ember/object/evented'
+import { alias, bool } from '@ember/object/computed'
+import { get, set, getProperties, getWithDefault } from "@ember/object"
+import { isBlank, isNone, isEmpty } from "@ember/utils"
+
 import { SupportedCoins } from 'melis-cm-svcs/utils/coins'
 import Coin from 'melis-cm-svcs/models/coin'
+import Logger from 'melis-cm-svcs/utils/logger'
 
-import formatMoney from "accounting/format-money"
+import formatMoney from 'accounting/format-money'
 
+import CMCore from 'npm:melis-api-js'
 
-CmCoinService = Ember.Service.extend(Ember.Evented,
-  cm:  Ember.inject.service('cm-session')
+C = CMCore.C
 
-  coinPrefs: Ember.computed.alias('cm.walletMeta.coinPrefs')
+CmCoinService = Service.extend(Evented,
+  cm:  service('cm-session')
+
+  coinPrefs: alias('cm.walletMeta.coinPrefs')
   inited: false
 
   #
@@ -16,14 +25,43 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   coins: ( ->
     availcoins = @get('cm.availableCoins')
-    SupportedCoins.filter((c) -> availcoins.includes(Ember.get(c, 'unit'))).map((c) -> Coin.create(c))
+    SupportedCoins.filter((c) -> availcoins.includes(get(c, 'unit'))).map((c) -> Coin.create(c))
   ).property('cm.availableCoins')
 
 
+  #
+  # coins (full object) that users can create accounts of
+  #
+  enabledCoins: ( ->
+    @get('coins').filter((c) => @get('cm.enabledCoins').includes(get(c, 'unit')))
+  ).property('cm.enabledCoins', 'coins')
+
+  #
+  # coins (full object) we have accounts for
+  #
+  activeCoins: ( ->
+    @get('coins').filter((c) =>  @get('activeUnits').includes(get(c, 'unit')))
+  ).property('coins', 'activeUnits')
+
+  #
+  # coins (just the label, BTC, DOGE etc...) we have accounts for
+  #
+  activeUnits: ( ->
+    @get('cm.accounts')?.uniqBy('coin').map((a) -> get(a, 'coin'))
+  ).property('cm.accounts.@each.coin')
+
+
+  #
+  #
+  #
   blocks: ( ->
-    @get('coins').map((c) -> Ember.getProperties(c, 'block') )
+    @get('coins').map((c) -> getProperties(c, 'block') )
   ).property('coins.@each.block')
 
+
+  validSchemes: ( ->
+    @get('coins').map((c) ->  c.get('scheme') ).uniq()
+  ).property('coins')
 
 
   #
@@ -35,13 +73,13 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
     coinPrefs ||= {}
 
     coins.forEach((c) =>
-      unit = Ember.get(c, 'unit')
+      unit = get(c, 'unit')
 
       # set subunit
-      if (sub = (Ember.getWithDefault(coinPrefs, 'subunit', {})[unit])) && (Ember.get(c, 'subunits').findBy('id', sub))
+      if (sub = (getWithDefault(coinPrefs, 'subunit', {})[unit])) && (get(c, 'subunits').findBy('id', sub))
         @setSubunit(unit, sub)
       else
-        sub = Ember.get(c, 'dfSubunit')
+        sub = get(c, 'dfSubunit')
         @setSubunit(unit, sub)
     )
 
@@ -50,8 +88,8 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   #
   setSubunit: (unit, sub) ->
-    if (current = @get('coins').findBy('unit', unit)) && (selected = Ember.get(current, 'subunits').findBy('id', sub))
-      Ember.set(current, 'subunit', selected)
+    if (current = @get('coins').findBy('unit', unit)) && (selected = get(current, 'subunits').findBy('id', sub))
+      set(current, 'subunit', selected)
 
 
   #
@@ -63,9 +101,9 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
 
     for coin, block of blocks
       if (current = coins.findBy('unit', coin))
-        Ember.set(current, 'block', block)
+        set(current, 'block', block)
       else
-        Ember.Logger.error('[coin] Not found, initializing top block for coin: ', coin, block)
+        Logger.warn('[coin] Not found, initializing top block for coin: ', coin, block)
 
 
   #
@@ -73,35 +111,35 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   setCoinPref: (unit, pref, value) ->
     unless (current = @get('coins').findBy('unit', unit))
-      Ember.Logger.error("[coin] No unit '#{unit}'")
+      Logger.error("[coin] No unit '#{unit}'")
       return false
-    Ember.set(current, pref, value)
+    set(current, pref, value)
 
   #
   #
   #
-  storeCoinPref: (unit, pref, value, set=true) ->
+  storeCoinPref: (unit, pref, value, doset=true) ->
 
     unless (current = @get('coins').findBy('unit', unit))
-      Ember.Logger.error("[coin] No unit '#{unit}'")
+      Logger.error("[coin] No unit '#{unit}'")
       return false
 
     prefs = @getWithDefault('coinPrefs', {}) || {}
     unitPrefs =
-      if (p = Ember.get(prefs, unit))
+      if (p = get(prefs, unit))
         p
       else
-        Ember.set(prefs, unit, {})
+        set(prefs, unit, {})
 
-    Ember.set(unitPrefs, pref, value)
+    set(unitPrefs, pref, value)
     @set('coinPrefs', prefs)
 
-    @setCoinPref(unit, pref, value) if set
+    @setCoinPref(unit, pref, value) if doset
 
     @get('cm.api').walletMetaSet('coinPrefs', prefs).then( ->
-      Ember.Logger.debug("[coin] Set '#{pref}' for unit '#{unit}' to '#{value}'")
+      Logger.debug("[coin] Set '#{pref}' for unit '#{unit}' to '#{value}'")
     ).catch((e) ->
-      Ember.Logger.error("[coin] Failed to set '#{pref}' for unit '#{unit}' to '#{value}': ", e)
+      Logger.error("[coin] Failed to set '#{pref}' for unit '#{unit}' to '#{value}': ", e)
     )
 
 
@@ -110,11 +148,78 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   storePrefSubunit: (unit, sub) ->
 
-    if (current = @get('coins').findBy('unit', unit)) && (selected = Ember.get(current, 'subunits').findBy('id', sub))
+    if (current = @get('coins').findBy('unit', unit)) && (selected = get(current, 'subunits').findBy('id', sub))
       @setSubunit(unit, sub)
       @storeCoinPref(unit, 'subunit', sub, false)
     else
-      Ember.Logger.error("[coin] cannot set subnit for unit '#{unit}' to '#{sub}'")
+      Logger.error("[coin] cannot set subnit for unit '#{unit}' to '#{sub}'")
+
+
+  #
+  #
+  addressFromUri: (uri, unit) ->
+    if (c = @get('coins').findBy('unit', unit))
+      if (scheme = c.get('scheme')) && uri.startsWith("#{scheme}:")
+        return uri.replace("#{scheme}:", '')
+      else
+        uri
+    else
+      uri
+
+
+
+  #
+  #
+  #
+  formatAddress: (account, address, options) ->
+    return  unless account && (coin = account.get('unit'))
+    @formatAddressCoin(coin, address, options)
+
+
+  #
+  #
+  #
+  formatAddressCoin: (coin, address, options) ->
+    return unless coin
+
+    if coin.get('features.altaddrs')
+      deflt = 
+        if coin.get('features.defaltaddr')
+          'standard'
+        else
+          'legacy'
+
+      options ||= {}
+      options.format ||= deflt
+      return unless (driver = @get('cm.api').getCoinDriver(coin.get('unit')))
+
+      if C.LEGACY_BITCOIN_REGEX.test(address)
+        # address is legacy
+        if options.format == 'legacy'
+          address
+        else
+          if (pfx = coin.get('prefix'))
+            @concatPfx(coin, driver.toCashAddress(address))
+          else
+            driver.toCashAddress(address)
+      else
+        # address is standard
+        if options.format == 'standard'
+          @concatPfx(coin, address)
+        else
+          driver.toLegacyAddress(address)
+    else
+      address
+
+
+  concatPfx: (coin, address) ->
+    if address.includes(':')
+      address
+    else if (pfx = coin.get('prefix'))
+      ''.concat(pfx, ':', address)
+    else
+      address
+
 
 
   #
@@ -129,15 +234,14 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
     ratio = options.ratio || divider
     scaled = amount/ratio
 
+    precision = account.get('subunit.precision') || 2
 
-    if divider > 100000.0
-      options.precision = 4
-    else if options.compact && (scaled >= 1000)
-      options.precision = 0
-    else
-      options.precision = 2
+    if (options.compact && (scaled >= 1000) && (precision >= 2))
+      precision = precision - 2
 
-    if Ember.isBlank(amount) && options.blank
+    options.precision ||= precision
+
+    if isBlank(amount) && options.blank
       options.blank
     else if options.fullPrecision
       scaled
@@ -192,21 +296,29 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   #
   newBlock: (data) ->
-    if (coin = Ember.get(data, 'coin'))
+    if (coin = get(data, 'coin'))
       if (current = @get('coins').findBy('unit', coin))
-        Ember.set(current, 'block', data)
+        set(current, 'block', data)
       else
-        Ember.Logger.warn("[coin] New block for unknown coin '#{coin}'")
+        Logger.warn("[coin] New block for unknown coin '#{coin}'")
 
     else
-      Ember.Logger.warn('[coin] New block with no indicated coin')
+      Logger.warn('[coin] New block with no indicated coin')
 
 
   #
   #
   blockForCoin: (coin) ->
     if coin && (current = @get('coins').findBy('unit', coin))
-      Ember.get(current, 'block')
+      get(current, 'block')
+
+
+  #
+  #
+  #
+  validateAddress: (address, coin) ->
+    @get('cm.api').isValidAddress(coin, address)
+
 
   #
   #
@@ -222,7 +334,7 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   accountsChanged: ( ->
     coins = @get('coins')
-    @get('cm.accounts').forEach((a) -> a.set('unit', coins.findBy('unit', a.get('coin'))) if Ember.isBlank(a.get('unit')))
+    @get('cm.accounts').forEach((a) -> a.set('unit', coins.findBy('unit', a.get('coin'))) if isBlank(a.get('unit')))
   ).observes('cm.accounts.[]').on('init')
 
 
@@ -231,12 +343,12 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   changedPrefs: (->
     if !@get('inited')
-      Ember.Logger.debug "[coin] Changed prefs.", @get('coinPrefs')
+      Logger.debug "[coin] Changed prefs.", @get('coinPrefs')
 
-      if !Ember.isBlank(prefs = @get('coinPrefs'))
+      if !isBlank(prefs = @get('coinPrefs'))
         for k,v of prefs
-          @setSubunit(k, sub) if (sub = Ember.get(v, 'subunit'))
-          ['exchange', 'explorer'].forEach((d) => @setCoinPref(k, d, p) if (p = Ember.get(v, d)))
+          @setSubunit(k, sub) if (sub = get(v, 'subunit'))
+          ['exchange', 'explorer'].forEach((d) => @setCoinPref(k, d, p) if (p = get(v, d)))
 
       @set('inited', true)
   ).observes('coinPrefs')
@@ -246,7 +358,7 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
   #
   #
   setup: (->
-    Ember.Logger.info "[coin] Started."
+    Logger.info "[coin] Started."
 
     @setupListeners()
     @get('coinPrefs')
@@ -258,7 +370,7 @@ CmCoinService = Ember.Service.extend(Ember.Evented,
     ).then( ->
       self.trigger('init-finished')
     ).catch((err) ->
-      Ember.Logger.error('[coin] Error during init: '. err)
+      Logger.error('[coin] Error during init: '. err)
       throw err
     )
 
