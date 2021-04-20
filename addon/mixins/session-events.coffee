@@ -2,7 +2,7 @@
 import Mixin from '@ember/object/mixin'
 import { get, set, getProperties } from '@ember/object'
 import Logger from 'melis-cm-svcs/utils/logger'
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 import { copy } from 'ember-copy'
 
 C = CMCore.C

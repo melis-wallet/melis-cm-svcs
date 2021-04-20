@@ -4,7 +4,7 @@ import { get, set, getProperties } from "@ember/object"
 import { isBlank, isNone, isEmpty } from "@ember/utils"
 import RSVP from 'rsvp'
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 import Ptx from 'melis-cm-svcs/models/ptx'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 import { mergeProperty } from 'melis-cm-svcs/utils/misc'
@@ -60,7 +60,7 @@ CmPreparedTxService = Service.extend(Evented,
   #
   #
   getPtxByHash: (hash, account) ->
-    @get('cm.api').ptxGetByHash(hash).then((res) =>
+    @get('cm.api').ptxGetByHash(account.get('cmo'), hash).then((res) =>
       if ptx = get(res, 'ptx')
         @pushPtx(id: ptx.id, account: account, cmo: ptx)
     ).catch((err) ->

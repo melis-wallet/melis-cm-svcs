@@ -3,7 +3,7 @@ import { alias } from '@ember/object/computed'
 import { get, set, getProperties } from "@ember/object"
 import { isBlank, isEmpty } from '@ember/utils'
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 
 C = CMCore.C
 

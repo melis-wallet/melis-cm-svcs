@@ -1,27 +1,5 @@
 # melis-cm-svcs
 
-This README outlines the details of collaborating on this Ember addon.
+This is the **headless wallet** for the Melis Wallet package.
 
-## Installation
-
-* `git clone <repository-url>` this repository
-* `cd melis-cm-svcs`
-* `npm install`
-* `bower install`
-
-## Running
-
-* `ember serve`
-* Visit your app at [http://localhost:4200](http://localhost:4200).
-
-## Running Tests
-
-* `npm test` (Runs `ember try:each` to test your addon against multiple Ember versions)
-* `ember test`
-* `ember test --server`
-
-## Building
-
-* `ember build`
-
-For more information on using ember-cli, visit [https://ember-cli.com/](https://ember-cli.com/).
+Please refer to the main repository. [Melis Wallet](https://github.com/melis-wallet/melis-cm-client).

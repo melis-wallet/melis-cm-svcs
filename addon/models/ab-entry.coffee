@@ -2,7 +2,7 @@ import { computed } from "@ember/object"
 import { isNone } from "@ember/utils"
 
 import { attr, Model } from 'ember-cli-simple-store/model'
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 
 C = CMCore.C
 

@@ -3,7 +3,7 @@ import { alias, bool } from "@ember/object/computed"
 import { get, set, getProperties } from "@ember/object"
 import { isBlank, isNone, isEmpty } from "@ember/utils"
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 import { storageFor } from 'ember-local-storage'
 
 import Logger from 'melis-cm-svcs/utils/logger'

@@ -4,8 +4,8 @@ import { get, set, getProperties } from '@ember/object'
 import { isBlank, isNone, isEmpty } from '@ember/utils'
 
 import { storageFor } from 'ember-local-storage'
-import Melis from 'npm:melis-credentials-seed'
-import CMCore from 'npm:melis-api-js'
+import Melis from 'melis-credentials-seed'
+import CMCore from 'melis-api-js'
 import wordlist_IT from 'melis-cm-svcs/utils/wordlists/it'
 
 import Logger from 'melis-cm-svcs/utils/logger'

@@ -10,7 +10,7 @@ import Logger from 'melis-cm-svcs/utils/logger'
 
 import formatMoney from 'accounting/format-money'
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 
 C = CMCore.C
 

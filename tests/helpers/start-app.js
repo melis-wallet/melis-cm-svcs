@@ -1,14 +1,14 @@
 import { run } from '@ember/runloop'
-import { merge } from '@ember/polyfills'
+import { assign } from '@ember/polyfills'
 
 import Application from '../../app';
 import config from '../../config/environment';
 
-import CMCore from 'npm:melis-api-js';
+import CMCore from 'melis-api-js';
 
 export default function startApp(attrs) {
-  let attributes = merge({}, config.APP);
-  attributes = merge(attributes, attrs); // use defaults, but you can override;
+  let attributes = assign({}, config.APP);
+  attributes = assign(attributes, attrs); // use defaults, but you can override;
 
   CMCore.C;
 

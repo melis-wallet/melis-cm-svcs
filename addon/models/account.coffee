@@ -5,7 +5,7 @@ import { isBlank } from '@ember/utils'
 
 import PtxsSupport from 'melis-cm-svcs/mixins/ptxs-support'
 import StreamSupport from 'melis-cm-svcs/mixins/stream-support'
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 import { storageFor } from 'ember-local-storage'
 
 

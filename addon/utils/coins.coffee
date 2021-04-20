@@ -37,6 +37,20 @@ BCH_EXPLORERS =
     { id: 'melis2',  label: 'regtest.melis.io', url: 'https://localhost/test2/%h'}
   ]
 
+ABC_EXPLORERS =
+  main: [
+    { id: 'blockchair',  label: 'Blockchair', url: 'https://blockchair.com/bitcoin-abc/transaction/%h'}
+  ]
+
+  test: [
+  ]
+
+  regtest: [
+    { id: 'melis', label: 'melis.io', url: 'https://localhost/test/%h'}
+    { id: 'melis2',  label: 'regtest.melis.io', url: 'https://localhost/test2/%h'}    
+  ]
+
+
 LTC_EXPLORERS =
   main: [
     { id: 'blockcypher',  label: 'Blockcypher', url: 'https://live.blockcypher.com/ltc/tx/%h/'}
@@ -114,6 +128,12 @@ BCH_Subunits = [
   { id: 'bits', divider: 100.0, symbol: 'bits', ratio: '0.000001 bch', precision: 0 }
 ]
 
+ABC_Subunits = [
+  { id: 'BCHA', divider: SATOSHI, symbol: 'BCHA', precision: 4 }
+  { id: 'mBCHA', divider: 100000.0, symbol: 'mBCHA', ratio: '0.001 bcha', precision: 2 }
+  { id: 'bits', divider: 100.0, symbol: 'bits', ratio: '0.000001 bcha', precision: 0 }
+]
+
 LTC_Subunits = [
   { id: 'LTC', divider: SATOSHI, symbol: 'LTC', precision: 2 }
   { id: 'mLTC', divider: 100000.0, symbol: 'mLTC', ratio: '0.001 ltc', precision: 2 }
@@ -141,6 +161,7 @@ DOGE_Subunits = [
 
 BTC_Features = { rbf: true,  unconfirmed: true, defaultUncf: false }
 BCH_Features = { rbf: false, unconfirmed: true, defaultUncf: false , altaddrs: true, defaltaddr: true }
+ABC_Features = { rbf: false, unconfirmed: true, defaultUncf: false , altaddrs: true, defaltaddr: true }
 LTC_Features = { rbf: false, unconfirmed: true, defaultUncf: false }
 GRS_Features = { rbf: false, unconfirmed: true, defaultUncf: true }
 BSV_Features = { rbf: false, unconfirmed: true, defaultUncf: true, altaddrs: true, defaltaddr: true }
@@ -150,12 +171,19 @@ SupportedCoins = [
   {unit: 'BTC', tsym: 'BTC', label: 'btc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.main }
   {unit: 'TBTC', tsym: 'BTC', label: 'tbtc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.test }
   {unit: 'RBTC', tsym: 'BTC', label: 'rbtc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.regtest }
-  {unit: 'BCH', tsym: 'BCH', label: 'bch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bitcoincash', prefix: 'bitcoincash', features: BCH_Features, explorers: BCH_EXPLORERS.main}
+
+  {unit: 'BCH', tsym: 'BCH', label: 'bch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bitcoincash', prefix: 'bitcoincash', features: BCH_Features, explorers: BCH_EXPLORERS.main}  
   {unit: 'TBCH', tsym: 'BCH', label: 'tbch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bchtest', prefix: 'bchtest', features: BCH_Features, explorers: BCH_EXPLORERS.test}
   {unit: 'RBCH', tsym: 'BCH', label: 'rbch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bchreg', prefix: 'bchreg', features: BCH_Features, explorers: BCH_EXPLORERS.regtest}
+
+  {unit: 'ABC', tsym: 'ABC', label: 'abc', symbol: 'BCHA', subunits: ABC_Subunits, dfSubunit: 'mBCHA', scheme: 'bitcoincash', prefix: 'bitcoincash', featureSs: ABC_Features, explorers: ABC_EXPLORERS.main}
+  {unit: 'TABC', tsym: 'ABC', label: 'tabc', symbol: 'BCHA', subunits: ABC_Subunits, dfSubunit: 'mBCHA', scheme: 'bchtest', prefix: 'bchtest', features: ABC_Features, explorers: ABC_EXPLORERS.test}
+  {unit: 'RABC', tsym: 'ABC', label: 'rabc', symbol: 'BCHA', subunits: ABC_Subunits, dfSubunit: 'mBCHA', scheme: 'bchreg', prefix: 'bchreg', features: ABC_Features, explorers: ABC_EXPLORERS.regtest}
+  
   {unit: 'LTC', tsym: 'LTC', label: 'ltc', symbol: 'LTC', subunits: LTC_Subunits, dfSubunit: 'mLTC', features: LTC_Features, explorers: LTC_EXPLORERS.main}
   {unit: 'TLTC', tsym: 'LTC', label: 'tltc', symbol: 'LTC', subunits: LTC_Subunits, dfSubunit: 'mLTC', features: LTC_Features, explorers: LTC_EXPLORERS.test}
   {unit: 'RLTC', tsym: 'LTC', label: 'rltc', symbol: 'LTC', subunits: LTC_Subunits, dfSubunit: 'mLTC', features: LTC_Features, explorers: LTC_EXPLORERS.regtest}
+
   {unit: 'GRS', tsym: 'GRS', label: 'grs', symbol: 'GRS', subunits: GRS_Subunits, dfSubunit: 'GRS', scheme: 'groestlcoin', features: GRS_Features, explorers: GRS_EXPLORERS.main}
   {unit: 'TGRS', tsym: 'GRS', label: 'tgrs', symbol: 'GRS', subunits: GRS_Subunits, dfSubunit: 'GRS', scheme: 'groestlcoin', features: GRS_Features, explorers: GRS_EXPLORERS.test}
   {unit: 'RGRS', tsym: 'GRS', label: 'rgrs', symbol: 'GRS', subunits: GRS_Subunits, dfSubunit: 'GRS', scheme: 'groestlcoin', features: GRS_Features, explorers: GRS_EXPLORERS.regtest}

@@ -2,7 +2,7 @@ import Service, { inject as service } from '@ember/service'
 import Evented from '@ember/object/evented'
 import { get, set, getProperties } from '@ember/object'
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 
 import Logger from 'melis-cm-svcs/utils/logger'
 

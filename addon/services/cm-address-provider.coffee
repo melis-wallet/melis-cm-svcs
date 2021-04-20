@@ -4,7 +4,7 @@ import Evented from '@ember/object/evented'
 import { alias, bool } from '@ember/object/computed'
 import { isBlank, isNone, isEmpty, isEqual } from '@ember/utils'
 import RSVP from 'rsvp'
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 import { filterProperties, mergedProperty } from 'melis-cm-svcs/utils/misc'

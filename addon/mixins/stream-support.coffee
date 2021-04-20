@@ -2,7 +2,7 @@ import EmberObject from '@ember/object'
 import Mixin from '@ember/object/mixin'
 import { sort, filterBy, filter } from '@ember/object/computed'
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 
 C = CMCore.C
 

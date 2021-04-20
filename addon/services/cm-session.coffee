@@ -6,7 +6,7 @@ import { alias, filterBy } from "@ember/object/computed"
 import { isBlank, isPresent } from "@ember/utils"
 import { assert } from "@ember/debug"
 import RSVP from 'rsvp'
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 import Configuration from 'melis-cm-svcs/utils/configuration'
 import SessionEvents from 'melis-cm-svcs/mixins/session-events'
 import ModelFactory from 'melis-cm-svcs/mixins/simple-model-factory'

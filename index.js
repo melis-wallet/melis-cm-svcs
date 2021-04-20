@@ -8,8 +8,19 @@ const mergeTrees = require('broccoli-merge-trees'),
 
 module.exports = {
   name: 'melis-cm-svcs',
+  options: {
+    autoImport: {
+      webpack: { 
+        node: { 
+          stream: true,
+          crypto: true 
+        }
+      }
+    }
+  },  
 
   included: function( app, parentAddon ) {
+    this._super.included.apply(this, arguments);    
     var target = (parentAddon || app);
 
     target.import('vendor/melis-cm-svcs/base32.js');

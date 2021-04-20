@@ -1,7 +1,7 @@
 import Service, { inject as service } from '@ember/service'
 import Evented from '@ember/object/evented'
 
-import CMCore from 'npm:melis-api-js'
+import CMCore from 'melis-api-js'
 import { waitTime, waitIdle, waitIdleTime } from 'melis-cm-svcs/utils/delayed-runners'
 
 import Logger from 'melis-cm-svcs/utils/logger'
