@@ -26,10 +26,12 @@ BCH_EXPLORERS =
     { id: 'blockchair',  label: 'Blockchair', url: 'https://blockchair.com/bitcoin-cash/transaction/%h'}
     { id: 'bitpay',  label: 'Bitpay', url: 'https://bch-insight.bitpay.com/tx/%h'}
     { id: 'btccom',  label: 'BTC.com', url: 'https://bch.btc.com/%h'}
+    { id: 'bitcoincom',  label: 'bitcoin.com', url: 'https://explorer.bitcoin.com/bch/tx/%h'}
   ]
 
   test: [
-    { id: 'blocktrail',  label: 'Blocktrail', url: 'https://www.blocktrail.com/tBCC/tx/%h'}
+    { id: 'bitcoincom',  label: 'bitcoin.com', url: 'https://explorer.bitcoin.com/tbch/tx/%h'}
+    { id: 'imaginary',  label: 'imaginary.cash', url: 'http://testnet.imaginary.cash/tx/$h'}
   ]
 
   regtest: [
@@ -53,6 +55,7 @@ ABC_EXPLORERS =
 
 LTC_EXPLORERS =
   main: [
+    { id: 'blockchair',  label: 'Blockchair', url: 'https://blockchair.com/litecoin/transaction/%h'}        
     { id: 'blockcypher',  label: 'Blockcypher', url: 'https://live.blockcypher.com/ltc/tx/%h/'}
     { id: 'chainso', label: 'chain.so', url: 'https://chain.so/tx/LTC/%h'}
     { id: 'litecore', label: 'Litecore', url: 'https://insight.litecore.io/tx/%h'}
@@ -71,6 +74,9 @@ LTC_EXPLORERS =
 
 GRS_EXPLORERS =
   main: [
+    { id: 'blockchair',  label: 'Blockchair', url: 'https://blockchair.com/groestlcoin/transaction/%h'}    
+    { id: 'blockbook',  label: 'Blockbook', url: ' https://blockbook.groestlcoin.org/tx/%h'},
+    { id: 'groestlcoin',  label: 'Groestlcoin.orh', url: 'https://esplora.groestlcoin.org/tx/%h'},    
     { id: 'cryptoid',  label: 'Cryptoid', url: ' https://chainz.cryptoid.info/grs/tx.dws?%h'}
     { id: 'groestlsight',  label: 'Groestlsight', url: 'https://groestlsight.groestlcoin.org/tx/%h'}
   ]
@@ -87,6 +93,7 @@ GRS_EXPLORERS =
 
 BSV_EXPLORERS =
   main: [
+    { id: 'blockchair',  label: 'Blockchair', url: 'https://blockchair.com/bitcoin-sv/transaction/%h'}    
     { id: 'bchsvexploere',  label: 'BCHSV Explorer', url: 'https://bchsvexplorer.com/tx/%h'}
     { id: 'whatsonchain', label: 'whatsonchain', url: 'https://whatsonchain.com/tx/%h'}
   ]
@@ -168,13 +175,14 @@ BSV_Features = { rbf: false, unconfirmed: true, defaultUncf: true, altaddrs: tru
 DOGE_Features = { rbf: false, unconfirmed: true, defaultUncf: true }
 
 SupportedCoins = [
-  {unit: 'BTC', tsym: 'BTC', label: 'btc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.main }
-  {unit: 'TBTC', tsym: 'BTC', label: 'tbtc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.test }
-  {unit: 'RBTC', tsym: 'BTC', label: 'rbtc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.regtest }
 
   {unit: 'BCH', tsym: 'BCH', label: 'bch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bitcoincash', prefix: 'bitcoincash', features: BCH_Features, explorers: BCH_EXPLORERS.main}  
   {unit: 'TBCH', tsym: 'BCH', label: 'tbch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bchtest', prefix: 'bchtest', features: BCH_Features, explorers: BCH_EXPLORERS.test}
   {unit: 'RBCH', tsym: 'BCH', label: 'rbch', symbol: 'BCH', subunits: BCH_Subunits, dfSubunit: 'mBCH', scheme: 'bchreg', prefix: 'bchreg', features: BCH_Features, explorers: BCH_EXPLORERS.regtest}
+
+  {unit: 'BTC', tsym: 'BTC', label: 'btc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.main }
+  {unit: 'TBTC', tsym: 'BTC', label: 'tbtc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.test }
+  {unit: 'RBTC', tsym: 'BTC', label: 'rbtc', symbol: 'BTC', subunits: BTC_Subunits, dfSubunit: 'mBTC', scheme: 'bitcoin', features: BTC_Features, explorers: EXPLORERS.regtest }
 
   {unit: 'ABC', tsym: 'ABC', label: 'abc', symbol: 'BCHA', subunits: ABC_Subunits, dfSubunit: 'mBCHA', scheme: 'bitcoincash', prefix: 'bitcoincash', featureSs: ABC_Features, explorers: ABC_EXPLORERS.main}
   {unit: 'TABC', tsym: 'ABC', label: 'tabc', symbol: 'BCHA', subunits: ABC_Subunits, dfSubunit: 'mBCHA', scheme: 'bchtest', prefix: 'bchtest', features: ABC_Features, explorers: ABC_EXPLORERS.test}

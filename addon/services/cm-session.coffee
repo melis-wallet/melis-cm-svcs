@@ -803,10 +803,10 @@ CmSessionService = Service.extend(Evented, SessionEvents, ModelFactory,
       RSVP.resolve()
 
 
-  accountDelete: (account) ->
+  accountDelete: (account, options) ->
     Logger.debug "[CM Session] delete account:", account
 
-    @get('api').accountDelete(get(account, 'cmo')).catch( (err) =>
+    @get('api').accountDelete(get(account, 'cmo'), options).catch( (err) =>
       Logger.error  '[CM Session] error deleting account: ', err
       throw err
     )
