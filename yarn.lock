@@ -4072,8 +4072,9 @@ caseless@~0.12.0:
   resolved "https://registry.yarnpkg.com/caseless/-/caseless-0.12.0.tgz#1b681c21ff84033c826543090689420d187151dc"
   integrity sha1-G2gcIf+EAzyCZUMJBolCDRhxUdw=
 
-cashaddrjs@melis-wallet/cashaddrjs:
+"cashaddrjs@github:melis-wallet/cashaddrjs":
   version "0.3.8"
+  uid b63a35cc94c8977a61b36f4eab6746d0f09b16e7
   resolved "https://codeload.github.com/melis-wallet/cashaddrjs/tar.gz/b63a35cc94c8977a61b36f4eab6746d0f09b16e7"
   dependencies:
     big-integer "1.6.36"
@@ -9187,12 +9188,7 @@ lodash.without@~3.2.1:
     lodash._basedifference "^3.0.0"
     lodash.restparam "^3.0.0"
 
-lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.4, lodash@^4.6.1:
-  version "4.17.20"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
-  integrity sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA==
-
-lodash@^4.17.21:
+lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.21, lodash@^4.17.4, lodash@^4.6.1:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
@@ -9377,14 +9373,14 @@ media-typer@0.3.0:
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
 
-melis-api-js@^0.14.3:
-  version "0.14.3"
-  resolved "https://registry.yarnpkg.com/melis-api-js/-/melis-api-js-0.14.3.tgz#c2716ac5d8604fa9d416ef4a6bbdfc02f9449dfe"
-  integrity sha512-Gv1Atjw1HUGE/i3seeDnciDkus9wJoUHqxb6nkX6QcERMVWTZ5PB3860jfMOYEbfZcbaI0dr8gxhQ/HKCoYHLQ==
+melis-api-js@^0.14.4:
+  version "0.14.4"
+  resolved "https://registry.yarnpkg.com/melis-api-js/-/melis-api-js-0.14.4.tgz#53ca3b84fa7c42f89fcfd0d38a497cb22e6f6bf4"
+  integrity sha512-AH03Dw8jDZvso/3j/6NZFPhV0LtMehhIk2hdus71moI2NpfI6kWwfGUAhk9HPYcGPSD3U/ZaPmlR9reEBmb1eQ==
   dependencies:
     bitcoinjs-lib "^3.3.2"
     bitcoinjs-message "^2.0.0"
-    cashaddrjs melis-wallet/cashaddrjs
+    cashaddrjs "github:melis-wallet/cashaddrjs"
     detect-node "^2.0.4"
     ecurve "^1.0.6"
     groestl-hash-js "^1.0.0"
