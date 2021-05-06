@@ -4072,8 +4072,9 @@ caseless@~0.12.0:
   resolved "https://registry.yarnpkg.com/caseless/-/caseless-0.12.0.tgz#1b681c21ff84033c826543090689420d187151dc"
   integrity sha1-G2gcIf+EAzyCZUMJBolCDRhxUdw=
 
-cashaddrjs@melis-wallet/cashaddrjs:
+"cashaddrjs@github:melis-wallet/cashaddrjs":
   version "0.3.8"
+  uid b63a35cc94c8977a61b36f4eab6746d0f09b16e7
   resolved "https://codeload.github.com/melis-wallet/cashaddrjs/tar.gz/b63a35cc94c8977a61b36f4eab6746d0f09b16e7"
   dependencies:
     big-integer "1.6.36"
@@ -9377,14 +9378,14 @@ media-typer@0.3.0:
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
 
-melis-api-js@^0.14.3:
-  version "0.14.3"
-  resolved "https://registry.yarnpkg.com/melis-api-js/-/melis-api-js-0.14.3.tgz#c2716ac5d8604fa9d416ef4a6bbdfc02f9449dfe"
-  integrity sha512-Gv1Atjw1HUGE/i3seeDnciDkus9wJoUHqxb6nkX6QcERMVWTZ5PB3860jfMOYEbfZcbaI0dr8gxhQ/HKCoYHLQ==
+melis-api-js@^0.14.4:
+  version "0.14.4"
+  resolved "https://registry.yarnpkg.com/melis-api-js/-/melis-api-js-0.14.4.tgz#53ca3b84fa7c42f89fcfd0d38a497cb22e6f6bf4"
+  integrity sha512-AH03Dw8jDZvso/3j/6NZFPhV0LtMehhIk2hdus71moI2NpfI6kWwfGUAhk9HPYcGPSD3U/ZaPmlR9reEBmb1eQ==
   dependencies:
     bitcoinjs-lib "^3.3.2"
     bitcoinjs-message "^2.0.0"
-    cashaddrjs melis-wallet/cashaddrjs
+    cashaddrjs "github:melis-wallet/cashaddrjs"
     detect-node "^2.0.4"
     ecurve "^1.0.6"
     groestl-hash-js "^1.0.0"
@@ -13129,9 +13130,9 @@ url-parse-lax@^3.0.0:
     prepend-http "^2.0.0"
 
 url-parse@^1.4.3, url-parse@^1.4.7:
-  version "1.4.7"
-  resolved "https://registry.yarnpkg.com/url-parse/-/url-parse-1.4.7.tgz#a8a83535e8c00a316e403a5db4ac1b9b853ae278"
-  integrity sha512-d3uaVyzDB9tQoSXFvuSUNFibTd9zxd2bkVrDRvF5TmvWWQwqE4lgYJ5m+x1DbecWkw+LK4RNl2CU1hHuOKPVlg==
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/url-parse/-/url-parse-1.5.1.tgz#d5fa9890af8a5e1f274a2c98376510f6425f6e3b"
+  integrity sha512-HOfCOUJt7iSYzEx/UqgtwKRMC6EU91NFhsCHMv9oM03VJcVo2Qrp8T8kI9D7amFf1cu+/3CEhgb3rF9zL7k85Q==
   dependencies:
     querystringify "^2.1.1"
     requires-port "^1.0.0"
