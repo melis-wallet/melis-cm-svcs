@@ -4072,8 +4072,9 @@ caseless@~0.12.0:
   resolved "https://registry.yarnpkg.com/caseless/-/caseless-0.12.0.tgz#1b681c21ff84033c826543090689420d187151dc"
   integrity sha1-G2gcIf+EAzyCZUMJBolCDRhxUdw=
 
-cashaddrjs@melis-wallet/cashaddrjs:
+"cashaddrjs@github:melis-wallet/cashaddrjs":
   version "0.3.8"
+  uid b63a35cc94c8977a61b36f4eab6746d0f09b16e7
   resolved "https://codeload.github.com/melis-wallet/cashaddrjs/tar.gz/b63a35cc94c8977a61b36f4eab6746d0f09b16e7"
   dependencies:
     big-integer "1.6.36"
@@ -9377,14 +9378,14 @@ media-typer@0.3.0:
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
 
-melis-api-js@^0.14.3:
-  version "0.14.3"
-  resolved "https://registry.yarnpkg.com/melis-api-js/-/melis-api-js-0.14.3.tgz#c2716ac5d8604fa9d416ef4a6bbdfc02f9449dfe"
-  integrity sha512-Gv1Atjw1HUGE/i3seeDnciDkus9wJoUHqxb6nkX6QcERMVWTZ5PB3860jfMOYEbfZcbaI0dr8gxhQ/HKCoYHLQ==
+melis-api-js@^0.14.4:
+  version "0.14.4"
+  resolved "https://registry.yarnpkg.com/melis-api-js/-/melis-api-js-0.14.4.tgz#53ca3b84fa7c42f89fcfd0d38a497cb22e6f6bf4"
+  integrity sha512-AH03Dw8jDZvso/3j/6NZFPhV0LtMehhIk2hdus71moI2NpfI6kWwfGUAhk9HPYcGPSD3U/ZaPmlR9reEBmb1eQ==
   dependencies:
     bitcoinjs-lib "^3.3.2"
     bitcoinjs-message "^2.0.0"
-    cashaddrjs melis-wallet/cashaddrjs
+    cashaddrjs "github:melis-wallet/cashaddrjs"
     detect-node "^2.0.4"
     ecurve "^1.0.6"
     groestl-hash-js "^1.0.0"
@@ -10576,9 +10577,9 @@ path-key@^3.0.0, path-key@^3.1.0:
   integrity sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==
 
 path-parse@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/path-parse/-/path-parse-1.0.6.tgz#d62dbb5679405d72c4737ec58600e9ddcf06d24c"
-  integrity sha512-GSmOT2EbHrINBf9SR7CDELwlJ8AENk3Qn7OikK4nFYAu3Ote2+JYNVvkpAEQm3/TLNEJFD/xZJjzyxg3KBWOzw==
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/path-parse/-/path-parse-1.0.7.tgz#fbc114b60ca42b30d9daf5858e4bd68bbedb6735"
+  integrity sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==
 
 path-posix@^1.0.0:
   version "1.0.0"
